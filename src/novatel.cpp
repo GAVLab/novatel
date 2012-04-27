@@ -1,6 +1,5 @@
-#include "Novatel.h"
+#include "novatel.h"
 #include <iostream>
-#include "MessageDisplay.h"
 #include <fstream>
 using namespace std;
 
@@ -130,7 +129,7 @@ void Novatel::bufferIncomingData(unsigned char *msg, unsigned int length)
 				readingACK=true;
 				bufIndex=1;
 			}
-			else 
+			else
 			{
 				//MessageDisplay::Instance().DisplayMessage("Novatel: Received unknown data.\r\n", 1);
 			}
@@ -217,12 +216,12 @@ void Novatel::bufferIncomingData(unsigned char *msg, unsigned int length)
 
 void Novatel::ParseLog(unsigned char *log, NOUT_ID logID)
 {
-	
-	 //cout << "Parsing Log: " << logID << endl;	
-	//cout << "Parsing Log: " << logID << " => " << parser.GetIDStr(logID) << endl;	
+
+	 //cout << "Parsing Log: " << logID << endl;
+	//cout << "Parsing Log: " << logID << " => " << parser.GetIDStr(logID) << endl;
 
 	switch (logID)
-	{	
+	{
 		case BESTPOSB:
 			// wait for mutex
 			WaitForSingleObject(hBestPOSMutex,INFINITE);
@@ -303,7 +302,7 @@ void Novatel::ParseLog(unsigned char *log, NOUT_ID logID)
 			ReleaseMutex(hBslnXYZMutex);
 			// set event to indicate new log has arrived
 			SetEvent(hNovatelEvents[NEWBSLNXYZ]);
-			break;		
+			break;
 		case RAWIMUSB:
 			// wait for mutex
 			WaitForSingleObject(hRawIMUSMutex,INFINITE);
@@ -922,7 +921,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
          iId = RASB;
          break;
       }
-   
+
       case  RBTB_LOG_TYPE:
       {
          iId = RBTB;
@@ -1012,7 +1011,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
          iId = SBLB;
          break;
       }
-   
+
       case  SBTB_LOG_TYPE:
       {
          iId = SBTB;
@@ -1024,7 +1023,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
          iId = SCHB;
          break;
       }
-   
+
       case  SFDB_LOG_TYPE:
       {
          iId = SFDB;
@@ -1193,7 +1192,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
       case  BESTVELB_LOG_TYPE:
       {
          iId = BESTVELB;
-         break;   
+         break;
       }
       //case  CLOCKMODELB_LOG_TYPE:
       //{
@@ -1422,7 +1421,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
 //	}
 //	else
 //		bReading=false;
-//	
+//
 //	return bReading;
 //}
 
@@ -1448,7 +1447,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
 //	int bytesRead;
 //	// character array to hold data read from com port
 //	//dataRead = new unsigned char[2000];
-//	
+//
 //	//cout << "Read thread started." << endl;
 //
 //	SetEvent(hReadStarted);
@@ -1503,7 +1502,7 @@ NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to ident
 //bool Novatel::Shutdown()
 //{
 //	comPort.close();
-//	
+//
 //	return true;
 //}
 

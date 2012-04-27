@@ -1,11 +1,8 @@
-/*#ifndef NOVATEL_H
-#define NOVATEL_H */
-
-#pragma once
+#ifndef NOVATEL_H
+#define NOVATEL_H
 
 #define BOOST_ASIO_NO_WIN32_LEAN_AND_MEAN
-#include "SerialSensor.h"
-#include "NovatelStructures.h"
+#include "novatel_structures.h"
 
 // define message ids
 #define NEWINSPVA 0
@@ -236,4 +233,4 @@ private:
 
 };
 
-//#endif
+#endif
