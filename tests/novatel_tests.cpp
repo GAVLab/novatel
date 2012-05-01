@@ -10,27 +10,32 @@
 
 TEST(StructureSizeTest, Headers) {
 	ASSERT_EQ(HEADER_SIZE, sizeof(Oem4BinaryHeader));
-	ASSERT_EQ(12, sizeof(OEM4ShortBinaryHeader));
-	//ASSERT_EQ(sizeof(OEM4_Binary_Header), 28);
+	ASSERT_EQ(SHORT_HEADER_SIZE, sizeof(OEM4ShortBinaryHeader));
 }
 
 
-TEST(StructureSizeTest, SubStructures) {
-	//ASSERT_EQ(sizeof(OEM4_Binary_Header), 28);
-	//ASSERT_EQ(sizeof(OEM4_Binary_Header_Short), 12);
-	//ASSERT_EQ(sizeof(OEM4_Binary_Header), 28);
+TEST(StructureSizeTest, IMUMessageStructures) {
+	ASSERT_EQ(HEADER_SIZE+92, sizeof(InsPositionVelocityAttitude));
+	ASSERT_EQ(SHORT_HEADER_SIZE+92, sizeof(InsPositionVelocityAttitudeShort));
+	ASSERT_EQ(HEADER_SIZE+52, sizeof(VehicleBodyRotation));
+	ASSERT_EQ(HEADER_SIZE+44, sizeof(InsSpeed));
+	ASSERT_EQ(HEADER_SIZE+44, sizeof(RawImu));
+	ASSERT_EQ(SHORT_HEADER_SIZE+44, sizeof(RawImuShort));
+	ASSERT_EQ(HEADER_SIZE+56, sizeof(BestLeverArm));
+	ASSERT_EQ(HEADER_SIZE+232, sizeof(InsCovariance));
+	ASSERT_EQ(SHORT_HEADER_SIZE+232, sizeof(InsCovarianceShort));
+	ASSERT_EQ(HEADER_SIZE+76, sizeof(BestGpsPosition));
 }
 
-TEST(StructureSizeTest, MessageStructures) {
+TEST(StructureSizeTest, GPSMessageStructures) {
 	ASSERT_EQ(HEADER_SIZE+76, sizeof(BestPosition));
 	ASSERT_EQ(HEADER_SIZE+84, sizeof(BestUtmPosition));
+	ASSERT_EQ(HEADER_SIZE+48, sizeof(BestVelocity));
+	ASSERT_EQ(HEADER_SIZE+116, sizeof(PseudorangePositionECEF));
+	ASSERT_EQ(HEADER_SIZE+60, sizeof(BaselineECEF));
+	ASSERT_EQ(HEADER_SIZE+116, sizeof(BestPositionECEF));
 
 }
-
-//TEST(StructureSizeTest, Enums) {
-//	std::cout << sizeof(TIME_STATUS) << std::endl;
-//	ASSERT_EQ(1,sizeof(TIME_STATUS));
-//}
 
 
 int main(int argc, char **argv) {

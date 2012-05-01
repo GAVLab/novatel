@@ -46,7 +46,15 @@
 #define MAXCHAN		28  // Maximum number of signal channels
 #define MAX_NUM_SAT 28	// Maximum number of satellites with information in the RTKDATA log
 #define HEADER_SIZE 28 // Binary header size for OEM 4, V, and 6 receivers
+#define SHORT_HEADER_SIZE 12 // short binary header size
 
+// IMU Constants
+// scale factor between integer counts and change in velocity in m/s for AG11 and AG58
+#define VELOCITY_CHANGE_SCALE_FACTOR_11_58 (0.3048/((double)134217728.0))
+// scale factor between integer counts and change in velocity in m/s for AG17 and AG62
+#define VELOCITY_CHANGE_SCALE_FACTOR_17_62 (0.3048/((double)67108864.0))
+// scale factor between integer counts and change in angle in rad for AG11, AG17, AG58, and AG62
+#define ANGULAR_CHANGE_SCALE_FACTOR (1.0/((double)8589934592.0))
 
 // define macro to pack structures correctly with both GCC and MSVC compilers
 #ifdef _MSC_VER // using MSVC
@@ -78,7 +86,7 @@ struct Oem4BinaryHeader
    uint8_t          idle;          	//!< Time the processor was idle in last sec between logs with same ID
    uint8_t          time_status;    //!< Indicates the quality of the GPS time
    uint16_t         gps_week;      	//!< GPS Week number
-   uint32_t         millisecs;     	//!< Milliseconds into week
+   uint32_t         gps_millisecs; 	//!< Milliseconds into week
    uint32_t         status;        	//!< Receiver status word
    uint16_t         Reserved;      	//!< Reserved for internal use
    uint16_t         version;       	//!< Receiver software build number (0-65535)
@@ -119,7 +127,263 @@ struct ImuStatus
 
 
 //*******************************************************************************
-// MESSAGE STRUCTURES
+// INS STRUCTURES
+//*******************************************************************************
+
+/*!
+ * INSPVA Message Structure
+ * This log allows INS position, velocity and
+ * attitude to be collected in one log, instead
+ * of using three separate logs.
+ */
+PACK(
+struct InsPositionVelocityAttitude
+{
+	Oem4BinaryHeader header;	//!< Message header
+	uint32_t gps_week;			//!< GPS week number
+	double gps_millisecs;		//!< Milliseconds into GPS week
+	double latitude;			//!< latitude - WGS84 (deg)
+	double longitude;			//!< longitude - WGS84 (deg)
+	double height;				//!< Ellipsoidal height - WGS84 (m)
+	double north_velocity;		//!< velocity in a northerly direction (m/s)
+	double east_velocity;		//!< velocity in an easterly direction (m/s)
+	double up_velocity;			//!< velocity in an up direction
+	double roll;				//!< right handed rotation around y-axis (degrees)
+	double pitch;				//!< right handed rotation aruond x-axis (degrees)
+	double azimuth;				//!< right handed rotation around z-axis (degrees)
+	InsStatus status;			//!< status of the INS system
+	int8_t crc[4];
+});
+
+/*!
+ * INSPVAS Message Structure
+ * This log allows INS position, velocity and
+ * attitude to be collected in one log, instead
+ * of using three separate logs. Short header version
+ */
+PACK(
+struct InsPositionVelocityAttitudeShort
+{
+	OEM4ShortBinaryHeader header;
+	uint32_t gps_week;			//!< GPS week number
+	double gps_millisecs;		//!< Milliseconds into GPS week
+	double latitude;			//!< latitude - WGS84 (deg)
+	double longitude;			//!< longitude - WGS84 (deg)
+	double height;				//!< Ellipsoidal height - WGS84 (m)
+	double north_velocity;		//!< velocity in a northerly direction (m/s)
+	double east_velocity;		//!< velocity in an easterly direction (m/s)
+	double up_velocity;			//!< velocity in an up direction
+	double roll;				//!< right handed rotation around y-axis (degrees)
+	double pitch;				//!< right handed rotation aruond x-axis (degrees)
+	double azimuth;				//!< right handed rotation around z-axis (degrees)
+	InsStatus status;			//!< status of the INS system
+	int8_t crc[4];
+});
+
+/*!
+ * INSCOV Message Structure
+ * The position, attitude, and velocity matrices
+ * in this log each contain 9 covariance values,
+ * with respect to the local level frame. For the
+ * attitude angles, they are given in the SPAN computation
+ * frame. These values are computed once per second and
+ * are only available after alignment.
+ */
+PACK(
+struct InsCovariance
+{
+	Oem4BinaryHeader header;	//!< Message header
+	uint32_t gps_week;				//!< GPS week number
+	double gps_millisecs;			//!< Milliseconds into GPS week
+	double position_covariance[9];  //!< Position covariance matrix [m^2] (xx,xy,xz,yz,yy,...)
+	double attitude_covariance[9];  //!< Attitude covariance matrix [deg^2] (xx,xy,xz,yz,yy,...)
+	double velocity_covariance[9];  //!< Velocity covariance matrix [(m/s)^2] (xx,xy,xz,yz,yy,...)
+	int8_t crc[4];
+});
+
+/*!
+ * INSCOVS Message Structure
+ * The position, attitude, and velocity matrices
+ * in this log each contain 9 covariance values,
+ * with respect to the local level frame. For the
+ * attitude angles, they are given in the SPAN computation
+ * frame. These values are computed once per second and
+ * are only available after alignment. This log is a short
+ * header version of INSCOV
+ */
+PACK(
+struct InsCovarianceShort
+{
+	OEM4ShortBinaryHeader header;	//!< Message header
+	uint32_t gps_week;				//!< GPS week number
+	double gps_millisecs;			//!< Milliseconds into GPS week
+	double position_covariance[9];  //!< Position covariance matrix [m^2] (xx,xy,xz,yz,yy,...)
+	double attitude_covariance[9];  //!< Attitude covariance matrix [deg^2] (xx,xy,xz,yz,yy,...)
+	double velocity_covariance[9];  //!< Velocity covariance matrix [(m/s)^2] (xx,xy,xz,yz,yy,...)
+	int8_t crc[4];
+});
+
+
+
+/*!
+ * INSSPD Message Structure
+ * This log contains the most recent speed
+ * measurements in the horizontal and vertical
+ * directions, and includes an INS status indicator.
+ */
+PACK(
+struct InsSpeed
+{
+	Oem4BinaryHeader header;	//!< Message header
+	uint32_t gps_week;			//!< GPS week number
+	double gps_millisecs;		//!< Milliseconds into GPS week
+	double track_over_ground;	//!< actual direction of motion over ground (degrees)
+    double horizontal_speed;	//!< horizontal speed in m/s
+	double vertical_speed;		//!< vertical speed in m/s
+	InsStatus status;			//!< status of the INS system
+	int8_t crc[4];
+});
+
+
+/*!
+ * RAWIMU Message Structure
+ * This log contains an IMU status indicator
+ * and the measurements from the accelerometers
+ * and gyros with respect to the IMU enclosure
+ * frame. If logging this data, consider the RAWIMUS
+ * log to reduce the amount of data,
+ */
+PACK(
+struct RawImu
+{
+	Oem4BinaryHeader header;	//!< Message header
+	uint32_t gps_week;			//!< GPS week number
+	double gps_millisecs;		//!< Milliseconds into GPS week
+	ImuStatus imuStatus;		//!< Status of the IMU
+	int32_t z_acceleration;		//!< change in velocity along z axis in scaled m/s
+	int32_t y_acceleration_neg; //!< -change in velocity along y axis in scaled m/s
+	int32_t x_acceleration;		//!< change in velocity along x axis in scaled m/s
+	int32_t z_gyro_rate;		//!< change in angle around z axis in radians
+	int32_t y_gyro_rate_neg; 	//!< -(change in angle around y axis) in radians
+	int32_t x_gyro_rate;		//!< change in angle around x axis in radians
+	int8_t crc[4];
+});
+// scale factor for change in angle (1.0/((double)8589934592.0)) for the AG11, AG58, AG17, and AG62
+// scale factor for change in velocity (acceleration)
+//(0.3048/((double)134217728.0)) for the AG11 and AG58
+//(0.3048/((double)67108864.0)) for the AG17 and AG62
+
+/*!
+ * RAWIMUS Message Structure
+ * This log contains an IMU status indicator
+ * and the measurements from the accelerometers
+ * and gyros with respect to the IMU enclosure
+ * frame. It is a short header version of RAWIMU
+ */
+PACK(
+struct RawImuShort
+{
+	OEM4ShortBinaryHeader header;	//!< Message header
+	uint32_t gps_week;				//!< GPS week number
+	double gps_millisecs;			//!< Milliseconds into GPS week
+	ImuStatus imuStatus;			//!< Status of the IMU
+	int32_t z_acceleration;			//!< change in velocity along z axis in scaled m/s
+	int32_t y_acceleration_neg; 	//!< -change in velocity along y axis in scaled m/s
+	int32_t x_acceleration;			//!< change in velocity along x axis in scaled m/s
+	int32_t z_gyro_rate;			//!< change in angle around z axis in radians
+	int32_t y_gyro_rate_neg; 		//!< -(change in angle around y axis) in radians
+	int32_t x_gyro_rate;			//!< change in angle around x axis in radians
+	int8_t crc[4];
+});
+
+/*!
+ * BESTGPS Message Structure
+ * This log contains the best available GPS
+ * position (without INS) computed by the receiver.
+ * In addition, it reports several status indicators,
+ * including differential age, which is useful in
+ * predicting anomalous behavior brought about by outages
+ * in differential corrections. A differential age of 0
+ * indicates that no differential correction was used.
+ */
+PACK(
+struct BestGpsPosition
+{
+	Oem4BinaryHeader header;			//!< Message header
+	SolutionStatus solution_status;		//!< Solution status
+	PositionType position_type;			//!< Position type
+	double latitude;					//!< latitude (deg)
+	double longitutude;					//!< longitude (deg)
+	double height;						//!< height above mean sea level (m)
+	float undulation;					//!< Undulation - the relationship between the geoid and the ellipsoid (m)
+	DatumID datum_id;					//!< datum id number
+	float latitude_standard_deviation;	//!< latitude standard deviation (m)
+	float longitude_standard_deviation;	//!< longitude standard deviation (m)
+	float height_standard_deviation;	//!< height standard deviation (m)
+	int8_t base_station_id[4];			//!< base station id
+	float differential_age;				//!< differential position age (sec)
+	float solution_age;					//!< solution age (sec)
+	uint8_t number_of_satellites;		//!< number of satellites tracked
+	uint8_t number_of_satellites_in_solution;	//!< number of satellites used in solution
+	uint8_t num_gps_plus_glonass_l1;	//!< number of GPS plus GLONASS L1 satellites used in solution
+	uint8_t num_gps_plus_glonass_l2;	//!< number of GPS plus GLONASS L2 satellites used in solution
+	uint8_t reserved;					//!< reserved
+	uint8_t extended_solution_status;	//!< extended solution status - OEMV and greater only
+	uint8_t reserved2; 					//!< reserved
+	uint8_t signals_used_mask;			//!< signals used mask - OEMV and greater only
+	uint8_t crc[4];						//!< 32-bit cyclic redundancy check (CRC)
+});
+
+
+/*!
+ * VEHICLEBODYROTATION Message Structure
+ * The VEHICLEBODYROTATION log reports the angular
+ *  offset from the vehicle frame to the SPAN frame.
+ *  The SPAN frame is defined by the transformed IMU
+ *  enclosure axis with Z pointing up, see the
+ *  SETIMUORIENTATION command on page 126. If your
+ *  IMU is mounted with the Z axis (as marked on the IMU
+ *  enclosure) pointing up, the IMU enclosure frame is
+ *  the same as the SPAN frame.
+ */
+PACK(
+struct VehicleBodyRotation
+{
+	Oem4BinaryHeader header;//!< Message header
+	double x_angle;			//!< rotation about vehicle frame x axis (deg)
+	double y_angle;			//!< rotation about vehicle frame y axis (deg)
+	double z_angle;			//!< rotation about vehicle frame z axis (deg)
+	double x_uncertainty;	//!< uncertainty of x axis rotation (deg)
+	double y_uncertainty;	//!< uncertainty of y axis rotation (deg)
+	double z_uncertainty;	//!< uncertainty of z axis rotation (deg)
+	int8_t crc[4];
+});
+
+
+/*!
+ * BESTLEVERARM Message Structure
+ * This log contains the distance between the
+ * IMU’s centre of navigation and the GPS phase
+ * centre in the IMU enclosure frame and its associated
+ * uncertainties.
+ */
+PACK(
+struct BestLeverArm
+{
+	Oem4BinaryHeader header;//!< Message header
+	double x_offset;		//!< x offset in IMU enclosure frame (m)
+	double y_offset;		//!< y offset in IMU enclosure frame (m)
+	double z_offset;		//!< z offset in IMU enclosure frame (m)
+	double x_uncertainty;	//!< uncertainty of x offset (m)
+	double y_uncertainty;	//!< uncertainty of x offset (m)
+	double z_uncertainty;	//!< uncertainty of x offset (m)
+	int32_t mapping;		//!< IMU axis mapping setting
+	int8_t crc[4];
+});
+
+
+//*******************************************************************************
+// GPS STRUCTURES
 //*******************************************************************************
 
 /*!
@@ -205,468 +469,144 @@ struct BestUtmPosition
 	uint8_t crc[4];						//!< 32-bit cyclic redundancy check (CRC)
 });
 
-struct INSPVA
-{
-	Oem4BinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	double latitude;
-	double longitude;
-	double height;
-	double northVel;
-	double eastVel;
-	double upVel;
-	double roll;
-	double pitch;
-	double azimuth;
-	INSStatus status;
-	int8_t crc[4];
-};
 
-struct INSPVAS
-{
-	OEM4ShortBinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	double latitude;
-	double longitude;
-	double height;
-	double northVel;	//
-	double eastVel;
-	double upVel;
-	double roll;		// degrees
-	double pitch;		// degrees
-	double azimuth;		// degrees
-	INSStatus status;
-	int8_t crc[4];
-};
-
-
-struct INSUTM
-{
-	Oem4BinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	uint32_t longZoneNumber;
-	uint32_t latZoneLetter;
-	double northing;
-	double easting;
-	double height;
-	INSStatus status;
-	int8_t crc[4];
-};
-
-struct VehicleBodyRotation
-{
-	double xAngle;
-	double yAngle;
-	double zAngle;
-	double xUncertainty;
-	double yUncertainty;
-	double zUncertainty;
-	int8_t crc[4];
-};
-
+/*!
+ * BESTVEL Message Structure
+ * This log contains the best available velocity
+ * information computed by the receiver. In addition,
+ * it reports a velocity status indicator, which is
+ * useful in indicating whether or not the corresponding
+ * data is valid. The velocity measurements sometimes
+ * have a latency associated with them. The time of validity
+ * is the time tag in the log minus the latency value.
+ */
+PACK(
 struct BestVelocity
 {
-	Oem4BinaryHeader header;
-	SolutionStatus solutionStatus;
-	PositionType velocityType;
-	float latency;		//!< measure of the latency of the velocity time tag in seconds
-	float age;			//!< differential age in seconds
-	double horizSpeed;	//!< horizontal speed in m/s
-	double trackOverGround;	//!< course in degrees
-	double verticalSpeed; //!< vertical speed in m/s
+	Oem4BinaryHeader header;			//!< Message header
+	SolutionStatus solution_status;		//!< Solution status
+	PositionType position_type;			//!< Position type
+	float latency;						//!< measure of the latency of the velocity time tag in seconds
+	float age;							//!< differential age in seconds
+	double horizontal_speed;			//!< horizontal speed in m/s
+	double track_over_ground;			//!< direction of travel in degrees
+	double vertical_speed; 				//!< vertical speed in m/s
 	float reserved;
 	int8_t crc[4];
-};
+});
 
-struct PsrXYZ
+/*!
+ * PSRXYZ Message Structure
+ * This log contains the receiver’s pseudorange
+ * position and velocity in ECEF coordinates. The
+ * positionand velocity status field’s indicate
+ * whether or not the corresponding data is valid.
+ */
+PACK(
+struct PseudorangePositionECEF
 {
-	Oem4BinaryHeader header;
-	SolutionStatus solutionStatus;
-	PositionType velocityType;
-    double            psrX;                //x coordinate (m)
-    double            psrY;                //y coordinate (m)
-    double            psrZ;                //z coordinate (m)
-    float            sig_psrX;            //Standard deviation of x coordinate (m)
-    float            sig_psrY;            //Standard deviation of y coordinate (m)
-    float            sig_psrZ;            //Standard deviation of z coordinate (m)
-    SolutionStatus    velStatus;        //Velocity solution status
-    PositionType    velType;        //Velocity type
-    double            velX;                //Velcoity in x (m/s)
-    double            velY;                //Velcoity in y (m/s)
-    double            velZ;                //Velcoity in z (m/s)
-    float            sig_velX;            //Standard deviation of velcoity in x (m/s)
-    float            sig_velY;            //Standard deviation of velcoity in y (m/s)
-    float            sig_velZ;            //Standard deviation of velcoity in z (m/s)
-    int8_t            baseStationID[4];    //Base station ID
-    float            latency;            //Latency in time tag (s)
-    float            diff_age;            //Differential age (s)
-    float            sol_age;            //Solution age (s)
-    uint8_t            num_obs;            //Number of observations tracked
-    uint8_t            numL1used;            //Number of GPS L1 observations used in computation
-    uint8_t            reserved[6];        //Reserved
-	uint8_t crc[4];
-};
-
-
-struct INSSPD
-{
-	Oem4BinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	double trackOverGround;	//!< actual direction of motion over ground (degrees)
-    double horizSpeed;		//!< horizontal speed in m/s
-	double verticalSpeed;	//!< vertical speed in m/s
-	INSStatus status;
-	int8_t crc[4];
-};
-
-struct RawIMU
-{
-	Oem4BinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	ImuStatus imuStatus;
-	int32_t accZ;	//!< acceleration along z axis in m/s
-	int32_t accNegY; //!< -*acceleration along y axis) in m/s
-	int32_t accX;	//!< acceleration along x axis in m/s
-	int32_t gyroZ;	//!< change in angle around z axis in radians
-	int32_t gyroNegY; //!< -(change in angle around y axis) in radians
-	int32_t gyroX; //!< change in angle around x axis in radians
-	int8_t crc[4];
-};
-// scale factor for change in angle (1.0/((double)8589934592.0)) for the AG11, AG58, AG17, and AG62
-// scale factor for change in velocity (acceleration)
-//(0.3048/((double)134217728.0)) for the AG11 and AG58
-//(0.3048/((double)67108864.0)) for the AG17 and AG62
-
-struct RawIMUS
-{
-	OEM4ShortBinaryHeader header;
-	uint32_t gpsWeek;
-	double gpsSeconds;
-	ImuStatus imuStatus;
-	int32_t accZ;	//!< acceleration along z axis in m/s
-	int32_t accNegY; //!< -*acceleration along y axis) in m/s
-	int32_t accX;	//!< acceleration along x axis in m/s
-	int32_t gyroZ;	//!< change in angle around z axis in radians
-	int32_t gyroNegY; //!< -(change in angle around y axis) in radians
-	int32_t gyroX; //!< change in angle around x axis in radians
-	int8_t crc[4];
-};
-
-//BSLNXYZB
-struct bslnxyz   //Structure for BSLNXYZ message
-{
-	Oem4BinaryHeader header;
-	SolutionStatus solutionStatus;
-	PositionType velocityType;
-	double    bslnX;                //Baseline x coordinate (m)
-    double    bslnY;                //Baseline y coordinate (m)
-    double    bslnZ;                //Baseline z coordinate (m)
-    float    sigbslnX;            //Standard deviation of baseline x coordinate (m)
-    float    sigbslnY;            //Standard deviation of baseline y coordinate (m)
-    float    sigbslnZ;            //Standard deviation of baseline z coordinate (m)
-    int8_t    baseStationID[4];    //Base station ID
-    uint8_t    num_obs;            //Number of observations tracked
-    uint8_t     numL1used;            //Number of GPS L1 observations used in computation
-    uint8_t     numL1;                //Number of GPS L1 observations above the RTK mask angle
-    uint8_t     numL2;                //Number of GPS L2 observations above the RTK mask angle
-    uint8_t     reserved[4];        //Reserved
-    uint8_t     crc[4];                //32 bit CRC
-};
-
-
-struct ReceiverError
-{
-	 int32_t DRAMStatus :1;
-	int32_t invalidFirmware : 1;
-	int32_t ROMStatus : 1;
-	int32_t reserved1 : 1;
-	int32_t ESNaccessStatus : 1;
-	int32_t authorizationCodeStatus : 1;
-	int32_t slowADCStatus : 1;
-	int32_t supplyVoltageStatus : 1;
-	int32_t thermometerStatus : 1;
-	int32_t temperatusStatus : 1;
-	int32_t MINOS4Status : 1;
-	int32_t PLLRf1Status : 1;
-	int32_t PLLRf2Status : 1;
-	int32_t RF1Status : 1;
-	int32_t RF2Status : 1;
-	int32_t NVMStatus : 1;
-	int32_t softwareResourceLimit : 1;
-	int32_t reserved2 : 3;
-	int32_t remoteLoadingBegun : 1;
-	int32_t exportRestriction : 1;
-	int32_t reserved3 : 9;
-	int32_t componentHardwareFailure : 1;
-
-};
-
-struct ReceiverStatus
-{
-	int32_t errorFlag : 1;
-	int32_t temperatureStatus : 1;
-	int32_t voltageSupplyStatus : 1;
-	int32_t antennaPowerStatus : 1;
-	int32_t reserved1 : 1;
-	int32_t antennaOpenFlag : 1;
-	int32_t antennaShortedFlag : 1;
-	int32_t CPUoverloadFlag : 1;
-	int32_t COM1overrunFlag : 1;
-	int32_t COM2overrunFlag : 1;
-	int32_t COM3overrunFlag : 1;
-	int32_t USBoverrun : 1;
-	int32_t reserved2 : 3;
-	int32_t RF1AGCStatus : 1;
-	int32_t reserved3 : 1;
-	int32_t RF2AGCStatus : 1;
-	int32_t almanacFlag : 1;
-	int32_t positionSolutionFlag : 1;
-	int32_t positionFixedFlag : 1;
-	int32_t clockSteeringStatus : 1;
-	int32_t clockModelFlag : 1;
-	int32_t extOscillatorFlag : 1;
-	int32_t softwarerResource : 1;
-	int32_t reserved4 : 4;
-	int32_t AUX3statusEventFlag : 1;
-	int32_t AUX2statusEventFlag : 1;
-	int32_t AUX1statusEventFlag : 1;
-};
-
-
-struct RXStatus
-{
-	Oem4BinaryHeader header;
-	ReceiverError error;	//!< receiver error field
-	uint32_t numStats;		//!< number of status messages
-	ReceiverStatus rxStat;	//!< receiver status word
-	uint32_t rxStatPri;
-	uint32_t rxStatSet;
-	uint32_t rxStatClear;
-	uint32_t aux1Stat;		//!< auxiliary 1 status field
-	uint32_t aux1Pri;
-	uint32_t aux1Set;
-	uint32_t aux1Clear;
-	uint32_t aux2Stat;
-	uint32_t aux2Pri;
-	uint32_t aux2Set;
-	uint32_t aux2Clear;
-	uint32_t aux3Stat;
-	uint32_t aux3Pri;
-	uint32_t aux3Set;
-	uint32_t aux3Clear;
-	int8_t crc[4];
-
-};
-
-struct RXStatusEvent
-{
-	Oem4BinaryHeader header;
-	StatusWord	status;		// the status word that generated the event message
-	uint32_t bitPosition;		// location of the bit in the status word (Table 81, pg 303
-	EventType	type;		// event type (Table 86, pg 306)
-	int8_t description[32];	// text description of the event or error
-};
-
-struct RXHwLevels
-{
-	Oem4BinaryHeader header;
-	float boardTemp;		//!< board temperature in degrees celcius
-	float antCurrent;		//!< antenna current (A)
-	float coreVoltage;		//!< CPU core voltage (V)
-	float supplyVoltage;	//!< supply voltage(V)
-	float rfVoltage;		//!< 5V RF supply voltage(V)
-	float lnaVoltage;		//!< internal LNA voltage (V)
-	float GPAI;				//!< general purpose analog input
-	float reserved1;
-	float reserved2;
-	float lnaGPSCardVoltage;	//!< LNA voltage (V) at GPSCard output
-	int8_t crc[4];			//!< 32-bit crc
-};
-
-struct BestGPSPositionTest
-{
-	Oem4BinaryHeader header;
-	uint8_t solutionStatus[4];
-	uint8_t positionType[4];
-	uint8_t latitude[8];
-	uint8_t longitutude[8];
-	uint8_t height[8];
-	uint8_t undulation[4];
-	uint8_t datumID[4];
-	uint8_t latStdDev[4];
-	uint8_t lonStdDev[4];
-	uint8_t heightStdDev[4];
-	int8_t baseStationID[4];
-	uint8_t diff_age[4];
-	uint8_t sol_age[4];
-	uint8_t numObs;
-	uint8_t numGPSL1;
-	uint8_t numGPSL1aboveRTK;
-	uint8_t numGPSL2aboveRTK;
-	uint8_t reserved[4];
-	uint8_t crc[4];
-};
-
-//*******************************************************************************
-// MESSAGE STRUCTURES
-
-//********************
-//BESTPOSB
-
-struct bestposb_data {
-    double latitude;
-    double longitutude;
-    double height;
-    float undulation;
-    DatumID datumID;
-    float latStdDev;
-    float lonStdDev;
-    float heightStdDev;
-    int8_t baseStationID[4];
-    float diff_age;
-    float sol_age;
-    uint8_t numObs;
-    uint8_t numGPSL1;
-    uint8_t numGPSL1aboveRTK;
-    uint8_t numGPSL2aboveRTK;
-    uint8_t reserved[4];
+	Oem4BinaryHeader header;				//!< Message header
+	SolutionStatus 	 solution_status;		//!< Solution status
+	PositionType 	 position_type;			//!< Position type
+    double       	 x_position;        	//!< x coordinate in ECEF (m)
+    double           y_position;        	//!< x coordinate in ECEF (m)
+    double           z_position;        	//!< x coordinate in ECEF (m)
+    float            x_standard_deviation;  //!< Standard deviation of x coordinate (m)
+    float            y_standard_deviation;  //!< Standard deviation of y coordinate (m)
+    float            z_standard_deviation;  //!< Standard deviation of z coordinate (m)
+    SolutionStatus   velocity_status;       //!< Velocity solution status
+    PositionType     velocity_type;         //!< Velocity solution type
+    double           x_velocity;            //Velocity in x (m/s)
+    double           y_velocity;            //Velocity in y (m/s)
+    double           z_velocity;            //Velocity in z (m/s)
+    float            x_velocity_standard_deviation;  //!< Standard deviation of velcoity in x (m/s)
+    float            y_velocity_standard_deviation;  //!< Standard deviation of velcoity in y (m/s)
+    float            z_velocity_standard_deviation;  //!< Standard deviation of velcoity in z (m/s)
+    int8_t           base_station_id[4];    //!< Base station ID
+    float            velocity_latency;      //!< Latency in velocity time tag (s)
+	float 		 	 differential_age;		//!< differential position age (sec)
+	float 			 solution_age;			//!< solution age (sec)
+	uint8_t 		 number_of_satellites;	//!< number of satellites tracked
+	uint8_t 		 number_of_satellites_in_solution;	//!< number of satellites used in solution
+    uint8_t          reserved[3];         	//!< Reserved
+	uint8_t 		 extended_solution_status;	//!< extended solution status - OEMV and greater only
+	uint8_t 		 reserved2; 			//!< reserved
+	uint8_t 		 signals_used_mask;		//!< signals used mask - OEMV and greater only
     uint8_t crc[4];
-} __attribute__((packed));
+});
 
-struct bestposb_log {
-    Oem4BinaryHeader header;
-    SolutionStatus solutionStatus;
-    PositionType positionType;
-    bestposb_data data;
-} __attribute__((packed));
-//********************
-
-
-//********************
-//BESTUTMB
-
-struct bestutmb_data {
-    uint32_t longZoneNumber;
-    uint32_t latZoneLetter;
-    double northing;
-    double easting;
-    double hgt;
-    float undulation;
-    DatumID datumID;
-    float northingStdDev;
-    float eastingStdDev;
-    float heightStdDev;
-    int8_t baseStationID[4];
-    float diff_age;
-    float sol_age;
-    uint8_t numObs;
-    uint8_t numGPSL1;
-    uint8_t numGPSL1aboveRTK;
-    uint8_t numGPSL2aboveRTK;
-    uint8_t reserved[4];
-    uint8_t crc[4];
-} __attribute__((packed));
-
-struct bestutmb_log {
-    Oem4BinaryHeader header;
-    SolutionStatus solutionStatus;
-    PositionType positionType;
-    bestutmb_data data;
-} __attribute__((packed));
-//********************
-
-//********************
-//BESTVELB
-
-struct bestvelb_data {
-    float latency;
-    float age;
-    double hor_spd;
-    double course;
-    double vert_spd;
-    float reserved;
-    uint8_t crc[4];
-} __attribute__((packed));
-
-struct bestvelb_log {
-    Oem4BinaryHeader header;
-    SolutionStatus solutionStatus;
-    PositionType velocityType;
-    bestvelb_data data;
-} __attribute__((packed));
-//********************
-
-//********************
-//BESTXYZB
-
-struct bestxyzb_data {
-    double X; //x coordinate (m)
-    double Y; //y coordinate (m)
-    double Z; //z coordinate (m)
-    float sig_X; //Standard deviation of x coordinate (m)
-    float sig_Y; //Standard deviation of y coordinate (m)
-    float sig_Z; //Standard deviation of z coordinate (m)
-    SolutionStatus velocityStatus; //Velocity solution status
-    PositionType velocityType; //Velocity type
-    double velX; //Velcoity in x (m/s)
-    double velY; //Velcoity in y (m/s)
-    double velZ; //Velcoity in z (m/s)
-    float sig_velX; //Standard deviation of velcoity in x (m/s)
-    float sig_velY; //Standard deviation of velcoity in y (m/s)
-    float sig_velZ; //Standard deviation of velcoity in z (m/s)
-    int8_t baseStationID[4]; //Base station ID
-    float latency; //Latency in time tag (s)
-    float diff_age; //Differential age (s)
-    float sol_age; //Solution age (s)
-    uint8_t num_obs; //Number of observations tracked
-    uint8_t numL1used; //Number of GPS L1 observations used in computation
-    uint8_t numL1overmask[1]; //Number of L1 ranges over mask angle
-    uint8_t numL2overmask[1]; //Number of L1 ranges over mask angle
-    uint8_t reserved[4]; //Reserved
-    uint8_t crc[4]; //32bit CRC
-} __attribute__((packed));
-
-struct bestxyzb_log {
-    Oem4BinaryHeader header; //Log header
-    SolutionStatus solutionStatus; //Position solution status
-    PositionType positionType; //Position type
-    bestxyzb_data data;
-} __attribute__((packed));
-
-//********************
-
-//********************
-//BSLNXYZB
-
-struct bslnxyzb_data //Structure for BSLNXYZ message
+/*!
+ * BSLNXYZ Message Structure
+ * This log contains the receiver’s RTK baseline
+ * in ECEF coordinates. The position status field
+ * indicates whether or not the corresponding data
+ * is valid.
+ */
+PACK(
+struct BaselineECEF
 {
-    double bslnX; //Baseline x coordinate (m)
-    double bslnY; //Baseline y coordinate (m)
-    double bslnZ; //Baseline z coordinate (m)
-    float sigbslnX; //Standard deviation of baseline x coordinate (m)
-    float sigbslnY; //Standard deviation of baseline y coordinate (m)
-    float sigbslnZ; //Standard deviation of baseline z coordinate (m)
-    int8_t baseStationID[4]; //Base station ID
-    uint8_t num_obs; //Number of observations tracked
-    uint8_t numL1used; //Number of GPS L1 observations used in computation
-    uint8_t numL1; //Number of GPS L1 observations above the RTK mask angle
-    uint8_t numL2; //Number of GPS L2 observations above the RTK mask angle
-    uint8_t reserved[4]; //Reserved
-    uint8_t crc[4]; //32 bit CRC
-} __attribute__((packed));
+	Oem4BinaryHeader header;				//!< Message header
+	SolutionStatus 	 solution_status;		//!< Solution status
+	PositionType 	 position_type;			//!< Position type
+	double		x_baseline;                	//!< Baseline x coordinate (m)
+    double    	y_baseline;                	//!< Baseline y coordinate (m)
+    double    	z_baseline;                	//!< Baseline z coordinate (m)
+    float     	x_baseline_standard_deviation;  //!< Standard deviation of baseline x coordinate (m)
+    float    	y_baseline_standard_deviation;  //!< Standard deviation of baseline y coordinate (m)
+    float    	z_baseline_standard_deviation;  //!< Standard deviation of baseline z coordinate (m)
+    int8_t      base_station_id[4];         //!< Base station ID
+	uint8_t 	number_of_satellites;		//!< number of satellites tracked
+	uint8_t 	number_of_satellites_in_solution;	//!< number of satellites used in solution
+	uint8_t 	num_gps_plus_glonass_l1;	//!< number of GPS plus GLONASS L1 satellites used in solution
+	uint8_t 	num_gps_plus_glonass_l2;	//!< number of GPS plus GLONASS L2 satellites used in solution
+	uint8_t 	reserved;					//!< reserved
+	uint8_t 	extended_solution_status;	//!< extended solution status - OEMV and greater only
+	uint8_t 	reserved2; 					//!< reserved
+	uint8_t 	signals_used_mask;			//!< signals used mask - OEMV and greater only
+	uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
+});
 
-struct bslnxyzb_log {
-    Oem4BinaryHeader header; //Log header
-    SolutionStatus solutionStatus; //Solution status
-    PositionType positionType; //Baseline type
-    bslnxyzb_data data;
-} __attribute__((packed));
-//********************
+/*!
+ * BESTXYZ Message Structure
+ * This log contains the receiver’s best
+ * available position and velocity in ECEF
+ * coordinates. The position and velocity status
+ * fields indicate whether or not the corresponding
+ * data is valid.
+ */
+PACK(
+struct BestPositionECEF
+{
+	Oem4BinaryHeader header;				//!< Message header
+	SolutionStatus 	 solution_status;		//!< Solution status
+	PositionType 	 position_type;			//!< Position type
+    double       	 x_position;        	//!< x coordinate in ECEF (m)
+    double           y_position;        	//!< x coordinate in ECEF (m)
+    double           z_position;        	//!< x coordinate in ECEF (m)
+    float            x_standard_deviation;  //!< Standard deviation of x coordinate (m)
+    float            y_standard_deviation;  //!< Standard deviation of y coordinate (m)
+    float            z_standard_deviation;  //!< Standard deviation of z coordinate (m)
+    SolutionStatus   velocity_status;       //!< Velocity solution status
+    PositionType     velocity_type;         //!< Velocity solution type
+    double           x_velocity;            //Velocity in x (m/s)
+    double           y_velocity;            //Velocity in y (m/s)
+    double           z_velocity;            //Velocity in z (m/s)
+    float            x_velocity_standard_deviation;  //!< Standard deviation of velcoity in x (m/s)
+    float            y_velocity_standard_deviation;  //!< Standard deviation of velcoity in y (m/s)
+    float            z_velocity_standard_deviation;  //!< Standard deviation of velcoity in z (m/s)
+    int8_t           base_station_id[4];    //!< Base station ID
+    float            velocity_latency;      //!< Latency in velocity time tag (s)
+	float 		 	 differential_age;		//!< differential position age (sec)
+	float 			 solution_age;			//!< solution age (sec)
+	uint8_t 		 number_of_satellites;	//!< number of satellites tracked
+	uint8_t 		 number_of_satellites_in_solution;	//!< number of satellites used in solution
+    uint8_t          reserved[3];         	//!< Reserved
+	uint8_t 		 extended_solution_status;	//!< extended solution status - OEMV and greater only
+	uint8_t 		 reserved2; 			//!< reserved
+	uint8_t 		 signals_used_mask;		//!< signals used mask - OEMV and greater only
+    uint8_t crc[4];
+});
+
 
 
 //********************
@@ -1273,6 +1213,137 @@ struct visionsolb_log {
     visionsolb_data data[MAX_NUM_SAT];
 } __attribute__((packed));
 //********************
+
+
+//*******************************************************************************
+// STATUS STRUCTURES
+//*******************************************************************************
+
+
+struct ReceiverError
+{
+	int32_t DRAMStatus :1;
+	int32_t invalidFirmware : 1;
+	int32_t ROMStatus : 1;
+	int32_t reserved1 : 1;
+	int32_t ESNaccessStatus : 1;
+	int32_t authorizationCodeStatus : 1;
+	int32_t slowADCStatus : 1;
+	int32_t supplyVoltageStatus : 1;
+	int32_t thermometerStatus : 1;
+	int32_t temperatusStatus : 1;
+	int32_t MINOS4Status : 1;
+	int32_t PLLRf1Status : 1;
+	int32_t PLLRf2Status : 1;
+	int32_t RF1Status : 1;
+	int32_t RF2Status : 1;
+	int32_t NVMStatus : 1;
+	int32_t softwareResourceLimit : 1;
+	int32_t reserved2 : 3;
+	int32_t remoteLoadingBegun : 1;
+	int32_t exportRestriction : 1;
+	int32_t reserved3 : 9;
+	int32_t componentHardwareFailure : 1;
+
+};
+
+struct ReceiverStatus
+{
+	int32_t errorFlag : 1;
+	int32_t temperatureStatus : 1;
+	int32_t voltageSupplyStatus : 1;
+	int32_t antennaPowerStatus : 1;
+	int32_t reserved1 : 1;
+	int32_t antennaOpenFlag : 1;
+	int32_t antennaShortedFlag : 1;
+	int32_t CPUoverloadFlag : 1;
+	int32_t COM1overrunFlag : 1;
+	int32_t COM2overrunFlag : 1;
+	int32_t COM3overrunFlag : 1;
+	int32_t USBoverrun : 1;
+	int32_t reserved2 : 3;
+	int32_t RF1AGCStatus : 1;
+	int32_t reserved3 : 1;
+	int32_t RF2AGCStatus : 1;
+	int32_t almanacFlag : 1;
+	int32_t positionSolutionFlag : 1;
+	int32_t positionFixedFlag : 1;
+	int32_t clockSteeringStatus : 1;
+	int32_t clockModelFlag : 1;
+	int32_t extOscillatorFlag : 1;
+	int32_t softwarerResource : 1;
+	int32_t reserved4 : 4;
+	int32_t AUX3statusEventFlag : 1;
+	int32_t AUX2statusEventFlag : 1;
+	int32_t AUX1statusEventFlag : 1;
+};
+
+
+
+/*!
+ * RXSTATUS Message Structure
+ * This log conveys various status parameters
+ * of the GNSS receiver system. These include
+ * the Receiver Status and Error words which contain
+ * several flags specifying status and error conditions.
+ * If an error occurs (shown in the Receiver Error word)
+ * the receiver idles all channels, turns off the antenna,
+ * anddisables the RF hardware as these conditions are
+ * considered to be fatal errors. The log contains a variable
+ * number of status words to allow for maximum flexibility and
+ * future expansion.
+ */
+PACK(
+struct RXStatus
+{
+	Oem4BinaryHeader header;	//!<
+	ReceiverError error;		//!< receiver error field
+	uint32_t numStats;			//!< number of status messages
+	ReceiverStatus rxStat;		//!< receiver status word
+	uint32_t rxStatPri;
+	uint32_t rxStatSet;
+	uint32_t rxStatClear;
+	uint32_t aux1Stat;		//!< auxiliary 1 status field
+	uint32_t aux1Pri;
+	uint32_t aux1Set;
+	uint32_t aux1Clear;
+	uint32_t aux2Stat;
+	uint32_t aux2Pri;
+	uint32_t aux2Set;
+	uint32_t aux2Clear;
+	uint32_t aux3Stat;
+	uint32_t aux3Pri;
+	uint32_t aux3Set;
+	uint32_t aux3Clear;
+	int8_t crc[4];
+});
+
+struct RXStatusEvent
+{
+	Oem4BinaryHeader header;
+	StatusWord	status;		// the status word that generated the event message
+	uint32_t bitPosition;		// location of the bit in the status word (Table 81, pg 303
+	EventType	type;		// event type (Table 86, pg 306)
+	int8_t description[32];	// text description of the event or error
+};
+
+struct RXHwLevels
+{
+	Oem4BinaryHeader header;
+	float boardTemp;		//!< board temperature in degrees celcius
+	float antCurrent;		//!< antenna current (A)
+	float coreVoltage;		//!< CPU core voltage (V)
+	float supplyVoltage;	//!< supply voltage(V)
+	float rfVoltage;		//!< 5V RF supply voltage(V)
+	float lnaVoltage;		//!< internal LNA voltage (V)
+	float GPAI;				//!< general purpose analog input
+	float reserved1;
+	float reserved2;
+	float lnaGPSCardVoltage;	//!< LNA voltage (V) at GPSCard output
+	int8_t crc[4];			//!< 32-bit crc
+};
+
+
 
 
 #endif

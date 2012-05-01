@@ -229,7 +229,7 @@ enum DatumID
 };
 
 
-enum INSStatus
+enum InsStatus
 {
 	INS_STATUS_INACTIVE,
 	INS_STATUS_ALIGNING,
