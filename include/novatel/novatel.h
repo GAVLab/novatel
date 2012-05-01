@@ -22,7 +22,7 @@
 #define CMDACK 14
 
 
-class Novatel : public SerialSensor
+class Novatel
 {
 public:
 	Novatel();
@@ -30,7 +30,7 @@ public:
 
 	//************************************************************************
 	//! array of event handles to signal when new messages have arrived
-	HANDLE hNovatelEvents[15];
+	//HANDLE hNovatelEvents[15];
 
 	//! Initializes com port
 	/*! Creates instance of com port object
@@ -124,78 +124,78 @@ private:
 	//! Last received BESTPOS log
 	BestPosition curBestPosition;
 	//! Mutex to control access to bestgpspos structure
-	HANDLE hBestPOSMutex;
-
-	//! Last received INSPVA log
-	INSPVA curINSPosVelAtt;
-	//! Mutex to control access to INSPVA structure
-	HANDLE hINSPVAMutex;
-
-	//! Last received PsrXYZ log
-	PsrXYZ curPsrXYZ;
-	//! Mutex to control access to PsrXYZ structure
-	HANDLE hPsrXYZMutex;
-
-	//! Last received INSPVAS log
-	INSPVAS curINSPosVelAttShort;
-	//! Mutex to control access to INSPVAS structure
-	HANDLE hINSPVASMutex;
-
-	//! Last received BslnXYZ log
-	bslnxyz curBslnXYZ;
-	//! Mutex to control access to BslnXYZ structure
-	HANDLE hBslnXYZMutex;
-
-	//! Last received RAWIMU log
-	RawIMU curRawIMU;
-	//! Mutex to control access to RAWIMU structure
-	HANDLE hRawIMUMutex;
-
-	//! Last received RAWIMUS log
-	RawIMUS curRawIMUS;
-	//! Mutex to control access to RAWIMUS structure
-	HANDLE hRawIMUSMutex;
-
-
-	//! Last received BESTUTM log
-	BestUTMPosition curBestUTMPosition;
-	//! Mutex to control access to bestgpspos structure
-	HANDLE hBestUTMMutex;
-
-	//! Last received VehicleBodyRotation log
-	VehicleBodyRotation curVehicleBodyRotation;
-	//! Mutex to control access to VehicleBodyRotation structure
-	HANDLE hVehicleBodyRotationMutex;
-
-	//! Last received BestVelocity log
-	BestVelocity curBestVelocity;
-	//! Mutex to control access to BestVelocity structure
-	HANDLE hBestVelocityMutex;
-
-	//! Last received INSSPD log
-	INSSPD curINSSPD;
-	//! Mutex to control access to INSSPD structure
-	HANDLE hINSSPDMutex;
-
-	//! Last received INSUTM log
-	INSUTM curINSUTM;
-	//! Mutex to control access to INSUTM structure
-	HANDLE hINSUTMMutex;
-
-	//! Last received RXStatus log
-	RXStatus curRXStatus;
-	//! Mutex to control access to RXStatus structure
-	HANDLE hRXStatusMutex;
-
-	//! Last received RXStatusEvent log
-	RXStatusEvent curRXStatusEvent;
-	//! Mutex to control access to RXStatusEvent structure
-	HANDLE hRXStatusEventMutex;
-
-	//! Last received RXHwLevels log
-	RXHwLevels curRXHwLevels;
-	//! Mutex to control access to RXHwLevels structure
-	HANDLE hRXHwLevelsMutex;
+//	HANDLE hBestPOSMutex;
+//
+//	//! Last received INSPVA log
+//	INSPVA curINSPosVelAtt;
+//	//! Mutex to control access to INSPVA structure
+//	HANDLE hINSPVAMutex;
+//
+//	//! Last received PsrXYZ log
+//	PsrXYZ curPsrXYZ;
+//	//! Mutex to control access to PsrXYZ structure
+//	HANDLE hPsrXYZMutex;
+//
+//	//! Last received INSPVAS log
+//	INSPVAS curINSPosVelAttShort;
+//	//! Mutex to control access to INSPVAS structure
+//	HANDLE hINSPVASMutex;
+//
+//	//! Last received BslnXYZ log
+//	bslnxyz curBslnXYZ;
+//	//! Mutex to control access to BslnXYZ structure
+//	HANDLE hBslnXYZMutex;
+//
+//	//! Last received RAWIMU log
+//	RawIMU curRawIMU;
+//	//! Mutex to control access to RAWIMU structure
+//	HANDLE hRawIMUMutex;
+//
+//	//! Last received RAWIMUS log
+//	RawIMUS curRawIMUS;
+//	//! Mutex to control access to RAWIMUS structure
+//	HANDLE hRawIMUSMutex;
+//
+//
+//	//! Last received BESTUTM log
+//	BestUTMPosition curBestUTMPosition;
+//	//! Mutex to control access to bestgpspos structure
+//	HANDLE hBestUTMMutex;
+//
+//	//! Last received VehicleBodyRotation log
+//	VehicleBodyRotation curVehicleBodyRotation;
+//	//! Mutex to control access to VehicleBodyRotation structure
+//	HANDLE hVehicleBodyRotationMutex;
+//
+//	//! Last received BestVelocity log
+//	BestVelocity curBestVelocity;
+//	//! Mutex to control access to BestVelocity structure
+//	HANDLE hBestVelocityMutex;
+//
+//	//! Last received INSSPD log
+//	INSSPD curINSSPD;
+//	//! Mutex to control access to INSSPD structure
+//	HANDLE hINSSPDMutex;
+//
+//	//! Last received INSUTM log
+//	INSUTM curINSUTM;
+//	//! Mutex to control access to INSUTM structure
+//	HANDLE hINSUTMMutex;
+//
+//	//! Last received RXStatus log
+//	RXStatus curRXStatus;
+//	//! Mutex to control access to RXStatus structure
+//	HANDLE hRXStatusMutex;
+//
+//	//! Last received RXStatusEvent log
+//	RXStatusEvent curRXStatusEvent;
+//	//! Mutex to control access to RXStatusEvent structure
+//	HANDLE hRXStatusEventMutex;
+//
+//	//! Last received RXHwLevels log
+//	RXHwLevels curRXHwLevels;
+//	//! Mutex to control access to RXHwLevels structure
+//	HANDLE hRXHwLevelsMutex;
 
 	int hdrLength;
 	unsigned int msgID;

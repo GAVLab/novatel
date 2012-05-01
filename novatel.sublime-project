@@ -1,0 +1,25 @@
+{
+	"folders":
+	[
+		{
+			"path": "/home/hododav/Development/sensors/novatel"
+		}
+	],
+
+    "settings":
+    {
+        "sublimeclang_options":
+        [
+            "-Wall",
+            "-I./.",
+            "-I./..",
+            "-I/usr/lib/clang/3.0/include",
+            "-I/usr/lib/clang/2.9/include/",
+            "-I/home/hododav/clang-3.0/include",
+            "-I./include",
+            "-I/usr/local/include",
+            "-I/usr/include"
+        ]
+
+    }
+}

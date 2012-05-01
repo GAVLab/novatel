@@ -2,8 +2,65 @@
 #ifndef NOVATELENUMS_H
 #define NOVATELENUMS_H
 
-enum TIME_STATUS
-{
+#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
+
+//*******************************************************************************
+// USER-DEFINED ENUMS
+//*******************************************************************************
+
+
+enum return_type {
+    success,
+    fail
+};
+
+enum base_type {
+    stationary,
+    dynamic
+};
+
+enum yes_no {
+    no,
+    yes
+};
+
+enum rec_type {
+    stand_alone,
+    rover_with_static_base,
+    static_base_station,
+    rover_with_dynamic_base,
+    dynamic_base_station
+};
+
+
+//*******************************************************************************
+// NOVATEL ENUMS
+//*******************************************************************************
+
+
+enum AMBIGUITY_TYPE {
+    UNDEFINED = 0,
+    FLOAT_L1 = 1,
+    FLOAT_IONOFREE = 2,
+    FLOAT_NARROW = 3,
+    NLF_FROM_WL1 = 4,
+    INT_L1 = 5,
+    INT_WIDE = 6,
+    INT_NARROW = 7,
+    IONOFREE_DISCRETE = 8
+};
+
+enum SEARCHER_TYPE {
+    NONE_REQUESTED = 0,
+    BUFFERING_MEASUREMENTS = 1,
+    SEARCHING = 2,
+    COMPLETE = 3,
+    HANDOFF_COMPLETE = 4
+};
+
+
+enum TIME_STATUS  {
    GPSTIME_UNKNOWN = 20,
    GPSTIME_APPROXIMATE =60 ,
    GPSTIME_COARSEADJUSTING=80,
@@ -13,7 +70,6 @@ enum TIME_STATUS
    GPSTIME_FINEADJUSTING=140,
    GPSTIME_FINE=160,
    GPSTIME_FINESTEERING=180,
-   
    GPSTIME_SATTIME=200,
 };
 
@@ -29,8 +85,7 @@ enum LogMode
 	STOPPED			//!< unlog message
 };
 
-//*******************************************************************************
-// NOVATEL ENUMS
+
 enum SolutionStatus
 {
 	SOL_COMPUTED,		//!< solution computed

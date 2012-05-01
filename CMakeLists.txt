@@ -65,7 +65,7 @@ ENDIF(NOT serial_FOUND)
 
 if(serial_FOUND)
   include_directories(${serial_INCLUDE_DIRS})
-  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES})
+  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES} pthread)
 else(serial_FOUND)
   message(FATAL_ERROR "Serial library was not found.")
 endif(serial_FOUND)

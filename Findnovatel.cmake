@@ -1,13 +1,13 @@
-find_path(serial_INCLUDE_DIRS serial/serial.h /usr/include "$ENV{NAMER_ROOT}")
+find_path(NOVATEL_INCLUDE_DIRS novatel/novatel.h /usr/include "$ENV{NAMER_ROOT}")
 
-find_library(serial_LIBRARIES serial /usr/lib "$ENV{NAMER_ROOT}")
+find_library(NOVATEL_LIBRARIES novatel /usr/lib "$ENV{NAMER_ROOT}")
 
-set(serial_FOUND TRUE)
+set(NOVATEL_FOUND TRUE)
 
-if (NOT serial_INCLUDE_DIRS)
-    set(serial_FOUND FALSE)
-endif (NOT serial_INCLUDE_DIRS)
+if (NOT NOVATEL_INCLUDE_DIRS)
+    set(NOVATEL_FOUND FALSE)
+endif (NOT NOVATEL_INCLUDE_DIRS)
 
-if (NOT serial_LIBRARIES)
-    set(serial_FOUND FALSE)
-endif (NOT serial_LIBRARIES)
+if (NOT NOVATEL_LIBRARIES)
+    set(NOVATEL_FOUND FALSE)
+endif (NOT NOVATEL_LIBRARIES)
