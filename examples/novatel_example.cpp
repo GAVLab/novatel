@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include "novatel/novatel.h"
-//using namespace novatel;
+using namespace novatel;
 using namespace std;
 
 
@@ -16,29 +16,28 @@ using namespace std;
 int main(int argc, char **argv)
 {
     if(argc < 3) {
-        std::cerr << "Usage: xbow440_example <serial port address> <baud rate>" << std::endl;
+        std::cerr << "Usage: novatel_example <serial port address> <baud rate>" << std::endl;
         return 0;
     }
-//    std::string port(argv[1]);
-//    int baudrate=38400;
-//    istringstream(argv[2]) >> baudrate;
+    std::string port(argv[1]);
+    int baudrate=115200;
+    istringstream(argv[2]) >> baudrate;
 
-//
-//    XBOW440 my_xbow;
-//    bool result = my_xbow.Connect(port,baudrate);
-//    //my_xbow.set_data_handler(&ProcessData);
-//
-//    if (result) {
-//        cout << "Successfully connected." << endl;
-//    }
-//    else {
-//        cout << "Failed to connect." << endl;
-//        return -1;
-//    }
-//
-//    while(1);
-//
-//    my_xbow.Disconnect();
+
+    Novatel my_gps;
+    bool result = my_gps.Connect(port,baudrate);
+
+    if (result) {
+        cout << "Successfully connected." << endl;
+    }
+    else {
+        cout << "Failed to connect." << endl;
+        return -1;
+    }
+
+    //while(1);
+
+    my_gps.Disconnect();
 
     return 0;
 }

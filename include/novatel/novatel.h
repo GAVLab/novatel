@@ -40,6 +40,7 @@
 #define NOVATEL_H
 
 #include <string>
+#include <cstring> // for size_t
 
 // Structure definition headers
 #include "novatel/novatel_enums.h"
@@ -57,7 +58,6 @@ namespace novatel{
 typedef boost::function<double()> GetTimeCallback;
 
 
-
 class Novatel
 {
 public:
@@ -73,7 +73,7 @@ public:
 	 * @throws ConnectionFailedException connection attempt failed.
 	 * @throws UnknownErrorCodeException unknown error code returned.
 	 */
-	bool Connect(std::string port, int baudrate=115200, long timeout=50);
+	bool Connect(std::string port, int baudrate=115200);
 
    /*!
     * Disconnects from the serial port
@@ -91,7 +91,7 @@ public:
      *
      * @return True if the GPS was found, false if it was not.
      */
-     bool Ping(int num_attempts=5, long timeout=100);
+     bool Ping(int num_attempts=5);
 
 
      /*!
@@ -111,6 +111,15 @@ public:
 
 	void UnlogAll();
 
+    /*!
+     * Requests version information from the receiver
+     *
+     * This requests the VERSION message from the receiver and
+     * uses the result to populate the receiver capapbilities
+     *
+     * @return True if the GPS was found, false if it was not.
+     */
+	bool UpdateVersion();
 
 private:
 
@@ -145,7 +154,15 @@ private:
 	/*!
 	 * Parses a packet of data from the GPS.  The
 	 */
-	void Parse(char *data, size_t length);
+	void ParseBinary(char *data, size_t length);
+
+	/*!
+	 * Parses a packet of data from the GPS.  The
+	 */
+	bool TokenizeAscii(std::string buffer, std::string &packet,
+			std::string &pre, std::string & post );
+
+	bool ParseVersion(std::string packet);
 
 	//! Serial port object for communicating with sensor
 	serial::Serial *serial_port_;
@@ -153,6 +170,22 @@ private:
 	boost::shared_ptr<boost::thread> read_thread_ptr_;
 	bool reading_status_;  //!< True if the read thread is running, false otherwise.
 	GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+
+	//////////////////////////////////////////////////////
+	// Receiver capabilities
+	//////////////////////////////////////////////////////
+	std::string protocol_version_;		//!< Receiver version, OEM4, OEMV, OEM6, or UNKNOWN
+	std::string serial_number_; //!< Receiver serial number
+	std::string hardware_version_; //!< Receiver hardware version
+	std::string software_version_; //!< Receiver hardware version
+	std::string model_;				//!< Receiver model number
+
+	bool l2_capable_; //!< Can the receiver handle L1 and L2 or just L1?
+	bool raw_capable_; //!< Can the receiver output raw measurements?
+	bool rtk_capable_; //!< Can the receiver compute RT2 and/or RT20 positions?
+	bool glonass_capable_; //!< Can the receiver receive GLONASS frequencies?
+	bool span_capable_;  //!< Is the receiver a SPAN unit?
+
 
 };
 }

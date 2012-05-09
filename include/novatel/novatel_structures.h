@@ -105,6 +105,7 @@ struct OEM4ShortBinaryHeader
    uint32_t         millisecs;      //!< Milliseconds into week
 });
 
+
 //! IMU status structure that is included in the RAWIMU message
 PACK(
 struct ImuStatus
@@ -1218,6 +1219,34 @@ struct visionsolb_log {
 //*******************************************************************************
 // STATUS STRUCTURES
 //*******************************************************************************
+
+
+/*!
+ * VERSION Message Structure
+ * This log contains the version information for
+ * all components of a system. When using a standard
+ * receiver, there is only one component in the log. A
+ * component may be hardware (for example, a receiver
+ * or data collector) or firmware in the form of
+ * applications or data (for example, data blocks for
+ * height models or user applications).
+ *
+ */
+PACK(
+struct Version
+{
+	Oem4BinaryHeader header;		//!< Message header
+	int32_t number_of_components;	//!< Number of components (cards, etc..)
+	int32_t component_type;			//!< Component type
+	char model[16];  				//!< Base model name
+	char serial_number[16];			//!< Product serial number
+	char hardware_version[16];  	//!< Hardware version number
+	char software_version[16];		//!< firmware version number
+	char boost_version[16];  		//!< boot code version
+	char compile_date[12];			//!< Firmware compile date
+	char compile_time[12];			//!< Firmware compile time
+	int8_t crc[4];
+});
 
 
 struct ReceiverError

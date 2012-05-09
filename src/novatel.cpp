@@ -2,6 +2,308 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
+using namespace novatel;
+#include <boost/tokenizer.hpp>
+
+
+/////////////////////////////////////////////////////
+// includes for default time callback
+#define WIN32_LEAN_AND_MEAN
+#include "boost/date_time/posix_time/posix_time.hpp"
+////////////////////////////////////////////////////
+
+
+/*!
+ * Default callback method for timestamping data.  Used if a
+ * user callback is not set.  Returns the current time from the
+ * CPU clock as the number of seconds from Jan 1, 1970
+ */
+double DefaultGetTime() {
+	boost::posix_time::ptime present_time(boost::posix_time::microsec_clock::universal_time());
+	boost::posix_time::time_duration duration(present_time.time_of_day());
+	return duration.total_seconds();
+}
+
+
+Novatel::Novatel() {
+	serial_port_=NULL;
+	reading_status_=false;
+	time_handler_ = DefaultGetTime;
+}
+
+Novatel::~Novatel() {
+
+
+}
+
+bool Novatel::Connect(std::string port, int baudrate) {
+	serial_port_ = new serial::Serial(port,baudrate);
+
+	if (!serial_port_->isOpen()){
+		std::cout << "Serial port: " << port << " failed to open." << std::endl;
+		delete serial_port_;
+		serial_port_ = NULL;
+		return false;
+	} else {
+		std::cout << "Serial port: " << port << " opened successfully." << std::endl;
+		std::cout << "Searching for Novatel GPS..." << std::endl;
+	}
+
+
+	// stop any incoming data and flush buffers
+	serial_port_->write("UNLOGALL\r\n");
+	// wait for data to stop cominig in
+	boost::this_thread::sleep(boost::posix_time::milliseconds(300));
+	// clear serial port buffers
+	serial_port_->flush();
+
+	// look for GPS by sending ping and waiting for response
+	if (!Ping()){
+		std::cout << "Novatel GPS not found on port: " << port << std::endl;
+		delete serial_port_;
+		serial_port_ = NULL;
+		return false;
+	}
+
+	// start reading
+	StartReading();
+	return true;
+
+}
+
+void Novatel::Disconnect() {
+	StopReading();
+	serial_port_->close();
+	delete serial_port_;
+	serial_port_=NULL;
+}
+
+bool Novatel::Ping(int num_attempts) {
+
+	while (num_attempts-->0) {
+		if (UpdateVersion()) {
+			std::cout << "Found Novatel receiver." << std::endl;
+			std::cout << "\tModel: " << model_ << std::endl;
+			std::cout << "\tSerial Number: " << serial_number_ << std::endl;
+			std::cout << "\tHardware version: " << hardware_version_ << std::endl;
+			std::cout << "\tSoftware version: " << software_version_ << std::endl << std::endl;;
+			std::cout << "Receiver capabilities:" << std::endl;
+			std::cout << "\tL2: ";
+			if (l2_capable_)
+				std::cout << "+" << std::endl;
+			else
+				std::cout << "-" << std::endl;
+			std::cout << "\tRaw measurements: ";
+			if (raw_capable_)
+				std::cout << "+" << std::endl;
+			else
+				std::cout << "-" << std::endl;
+			std::cout << "\tRTK: ";
+			if (rtk_capable_)
+				std::cout << "+" << std::endl;
+			else
+				std::cout << "-" << std::endl;
+			std::cout << "\tSPAN: ";
+			if (span_capable_)
+				std::cout << "+" << std::endl;
+			else
+				std::cout << "-" << std::endl;
+			std::cout << "\tGLONASS: ";
+			if (glonass_capable_)
+				std::cout << "+" << std::endl;
+			else
+				std::cout << "-" << std::endl;
+			return true;
+		}
+	}
+
+	// no response found
+	return false;
+
+}
+
+bool Novatel::UpdateVersion()
+{
+	// request the receiver version and wait for a response
+	// example response:
+	//#VERSIONA,COM1,0,71.5,FINESTEERING,1362,340308.478,00000008,3681,2291;
+	//    1,GPSCARD,"L12RV","DZZ06040010","OEMV2G-2.00-2T","3.000A19","3.000A9",
+	//    "2006/Feb/ 9","17:14:33"*5e8df6e0
+
+	// clear port
+	serial_port_->flush();
+	// send request for version
+	serial_port_->write("log versiona once\r\n");
+	// read from the serial port until a new line character is seen
+	std::string gps_response = serial_port_->readline(5000);
+
+
+
+	return false;
+
+}
+
+/*!
+ * Parses a packet of data from the GPS.  The
+ */
+bool Novatel::TokenizeAscii(std::string buffer, std::string &packet,
+			std::string &pre, std::string & post )
+{
+	// find start and end of ascii message
+	size_t start_pos=buffer.find("#");
+	size_t end_pos=buffer.find("\r\n");
+
+	if (((start_pos==string::npos)&&(end_pos!=string::npos))||
+			(start_pos>end_pos)){
+		// full message was not found, but the end of a message was found
+		// remove everything before that end
+		pre="";
+		packet="";
+		post=buffer.substr(end_pos+2, buffer.length()-end_pos-2);
+		return false;
+	} else if (((start_pos==string::npos)&&(end_pos==string::npos))) {
+		// full message was not found
+		pre=buffer;
+		packet="";
+		post="";
+		return false;
+	}else{
+		packet = buffer.substr(start_pos,end_pos-start_pos);
+		pre = buffer.substr(0,start_pos);
+		post = buffer.substr(end_pos,buffer.length()-end_pos);
+		return true;
+	}
+}
+
+bool Novatel::ParseVersion(std::string packet) {
+	// parse the results - message should start with "#VERSIONA"
+		size_t found_version=packet.find("VERSIONA");
+		if (found_version==string::npos)
+			return false;
+
+		// parse version information
+		// remove header
+		size_t pos=packet.find(";");
+		if (pos==string::npos) {
+			std::cout << "Error parsing received version."
+					" End of message was not found" << std::endl;
+			return false;
+		}
+
+		// remove header from message
+		std::string message=packet.substr(pos+1, packet.length()-pos-2);
+		// parse message body by tokening on ","
+		typedef boost::tokenizer<boost::char_separator<char> >
+			tokenizer;
+		boost::char_separator<char> sep(",");
+		tokenizer tokens(message, sep);
+		// set up iterator to go through token list
+		tokenizer::iterator current_token=tokens.begin();
+		string num_comps_string=*(current_token);
+		int number_components=atoi(num_comps_string.c_str());
+		// make sure the correct number of tokens were found
+		int token_count=0;
+		for(current_token=tokens.begin(); current_token!=tokens.end();++current_token)
+			token_count++;
+
+
+
+		// should be 9 tokens, if not something is wrong
+		if (token_count!=(8*number_components+1)) {
+			std::cout << "Error parsing received version. "
+					"Incorrect number of tokens found." << std::endl;
+			return false;
+		}
+
+		current_token=tokens.begin();
+		// device type is 2nd token
+		string device_type=*(++current_token);
+		// model is 3rd token
+		model_=*(++current_token);
+		// serial number is 4th token
+		serial_number_=*(++current_token);
+		// model is 5rd token
+		hardware_version_=*(++current_token);
+		// model is 6rd token
+		software_version_=*(++current_token);
+
+		// parse the version:
+		if (hardware_version_.length()>3)
+			protocol_version_=hardware_version_.substr(1,5);
+		else
+			protocol_version_="UNKNOWN";
+
+		// parse model number:
+		// is the receiver capable of raw measurements?
+		if (model_.substr(0,1)=="L")
+			raw_capable_=true;
+		else
+			raw_capable_=false;
+
+		// can the receiver receive L2?
+		if (model_.find("12")!=string::npos)
+			l2_capable_=true;
+		else
+			l2_capable_=false;
+
+		// can the receiver receive GLONASS?
+		if (model_.find("G")!=string::npos)
+			glonass_capable_=true;
+		else
+			glonass_capable_=false;
+
+		// Is this a SPAN unit?
+		if ((model_.find("I")!=string::npos)||(model_.find("J")!=string::npos))
+			span_capable_=true;
+		else
+			span_capable_=false;
+
+		// Can the receiver process RTK?
+		if (model_.find("R")!=string::npos)
+			rtk_capable_=true;
+		else
+			rtk_capable_=false;
+
+
+		return true;
+
+}
+
+
+void Novatel::StartReading() {
+	// create thread to read from sensor
+	reading_status_=true;
+	read_thread_ptr_ = boost::shared_ptr<boost::thread >
+		(new boost::thread(boost::bind(&Novatel::ReadSerialPort, this)));
+}
+
+void Novatel::StopReading() {
+	reading_status_=false;
+}
+
+
+void Novatel::ReadSerialPort() {
+//	unsigned char buffer[31];
+//	size_t len;
+//	double time_stamp;
+//
+//	Resync();
+//
+//	while (reading_status_) {
+//		len = serial_port_->read(buffer, read_size_);
+//		imu_data_.receive_time = time_handler_();
+//
+//		// check for header and first of packet type
+//		if ((buffer[0]!='U')&&(buffer[1]!='U')&&(buffer[2]!=0x53)) {
+//			Resync();
+//			continue;
+//		}
+//
+//		// parse packet
+//		Parse(buffer+5, buffer[3]);
+//	}
+
+}
 
 //Novatel::Novatel()
 //{
