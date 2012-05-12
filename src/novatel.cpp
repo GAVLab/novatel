@@ -29,11 +29,20 @@ void DefaultAcknowledgementHandler() {
     std::cout << "Acknowledgement received." << std::endl;
 }
 
+void DefaultBestPositionCallback(Position best_position){
+    std:: cout << "BESTPOS: \nGPS Week: " << best_position.header.gps_week <<
+                  "  GPS milliseconds: " << best_position.header.gps_millisecs << std::endl <<
+                  "Latitude: " << best_position.latitude << std::endl <<
+                  "Longitude: " << best_position.longitude << std::endl <<
+                  "Height: " << best_position.height << std::endl << std::endl;
+}
+
 Novatel::Novatel() {
 	serial_port_=NULL;
 	reading_status_=false;
 	time_handler_ = DefaultGetTime;
     handle_acknowledgement_=DefaultAcknowledgementHandler;
+    best_position_callback_=DefaultBestPositionCallback;
 	reading_acknowledgement_=false;
     buffer_index_=0;
     read_timestamp_=0;
@@ -412,9 +421,9 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
 
     switch (message_id) {
         case BESTPOSB_LOG_TYPE:
-            BestPosition best_position;
+            Position best_position;
             memcpy(&best_position, message, sizeof(best_position));
-            std::cout << "Parsed bestpos" << std::endl;
+            best_position_callback_(best_position);
             break;
 
         default:

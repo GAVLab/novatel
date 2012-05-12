@@ -58,6 +58,36 @@ namespace novatel{
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
 
+// INS Specific Callbacks
+typedef boost::function<void(InsPositionVelocityAttitude&)> InsPositionVelocityAttitudeCallback;
+typedef boost::function<void(InsPositionVelocityAttitudeShort&)> InsPositionVelocityAttitudeShortCallback;
+typedef boost::function<void(VehicleBodyRotation&)> VehicleBodyRotationCallback;
+typedef boost::function<void(InsSpeed&)> InsSpeedCallback;
+typedef boost::function<void(RawImu&)> RawImuCallback;
+typedef boost::function<void(RawImuShort&)> RawImuShortCallback;
+typedef boost::function<void(Position&)> BestGpsPositionCallback;
+typedef boost::function<void(BestLeverArm&)> BestLeverArmCallback;
+typedef boost::function<void(InsCovariance&)> InsCovarianceCallback;
+typedef boost::function<void(InsCovarianceShort&)> InsCovarianceShortCallback;
+
+// GPS Callbacks
+typedef boost::function<void(UtmPosition&)> BestUtmPositionCallback;
+typedef boost::function<void(Velocity&)> BestVelocityCallback;
+typedef boost::function<void(PositionEcef&)> BestPositionEcefCallback;
+typedef boost::function<void(Dop&)> PseudorangeDopCallback;
+typedef boost::function<void(Dop&)> RtkDopCallback;
+typedef boost::function<void(BaselineEcef&)> BaselineEcefCallback;
+typedef boost::function<void(IonosphericModel&)> IonosphericModelCallback;
+typedef boost::function<void(RangeMeasurements&)> RangeMeasurementsCallback;
+typedef boost::function<void(CompressedRangeMeasurements&)> CompressedRangeMeasurementsCallback;
+typedef boost::function<void(GpsEphemeris&)> GpsEphemerisCallback;
+typedef boost::function<void(SatellitePositions&)> SatellitePositionsCallback;
+typedef boost::function<void(TimeOffset&)> TimeOffsetCallback;
+typedef boost::function<void(ReceiverHardwareStatus&)> ReceiverHardwareStatusCallback;
+typedef boost::function<void(Position&)> BestPositionCallback;
+typedef boost::function<void(Position&)> BestPseudorangePositionCallback;
+typedef boost::function<void(Position&)> BestRtkPositionCallback;
+
 
 class Novatel
 {
@@ -169,6 +199,40 @@ private:
 	GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
 
 	HandleAcknowledgementCallback handle_acknowledgement_;
+
+    //////////////////////////////////////////////////////
+    // New Data Callbacks
+    //////////////////////////////////////////////////////
+    BestGpsPositionCallback best_gps_position_callback_;
+    BestLeverArmCallback best_lever_arm_callback_;
+    BestPositionCallback best_position_callback_;
+    BestUtmPositionCallback best_utm_position_callback_;
+    BestVelocityCallback best_velocity_callback_;
+    BestPositionEcefCallback best_position_ecef_callback_;
+    InsPositionVelocityAttitudeCallback ins_position_velocity_attitude_callback_;
+    InsPositionVelocityAttitudeShortCallback ins_position_velocity_attitude_short_callback_;
+    VehicleBodyRotationCallback vehicle_body_rotation_callback_;
+    InsSpeedCallback ins_speed_callback_;
+    RawImuCallback raw_imu_callback_;
+    RawImuShortCallback raw_imu_short_callback_;
+    InsCovarianceCallback ins_covariance_callback_;
+    InsCovarianceShortCallback ins_covariance_short_callback_;
+
+    // GPS Callbacks
+    PseudorangeDopCallback pseudorange_dop_callback_;
+    RtkDopCallback rtk_dop_callback_;
+    BaselineEcefCallback baseline_ecef_callback_;
+    IonosphericModelCallback ionospheric_model_callback_;
+    RangeMeasurementsCallback range_measurements_callback_;
+    CompressedRangeMeasurementsCallback compressed_range_measurements_callback_;
+    GpsEphemerisCallback gps_ephemeris_callback_;
+    SatellitePositionsCallback satellite_positions_callback_;
+    TimeOffsetCallback time_offset_callback_;
+    ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
+    BestPseudorangePositionCallback best_pseudorange_position_callback_;
+    BestRtkPositionCallback best_rtk_position_callback_;
+
+
 
 	//////////////////////////////////////////////////////
 	// Incoming data buffers

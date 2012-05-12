@@ -27,21 +27,27 @@ TEST(StructureSizeTest, IMUMessageStructures) {
 	ASSERT_EQ(HEADER_SIZE+56, sizeof(BestLeverArm));
 	ASSERT_EQ(HEADER_SIZE+232, sizeof(InsCovariance));
 	ASSERT_EQ(SHORT_HEADER_SIZE+232, sizeof(InsCovarianceShort));
-	ASSERT_EQ(HEADER_SIZE+76, sizeof(BestGpsPosition));
 }
 
 TEST(StructureSizeTest, GPSMessageStructures) {
-	ASSERT_EQ(HEADER_SIZE+76, sizeof(BestPosition));
-	ASSERT_EQ(HEADER_SIZE+84, sizeof(BestUtmPosition));
-	ASSERT_EQ(HEADER_SIZE+48, sizeof(BestVelocity));
-	ASSERT_EQ(HEADER_SIZE+116, sizeof(PseudorangePositionECEF));
-	ASSERT_EQ(HEADER_SIZE+60, sizeof(BaselineECEF));
-	ASSERT_EQ(HEADER_SIZE+116, sizeof(BestPositionECEF));
-}
+    ASSERT_EQ(HEADER_SIZE+76, sizeof(Position));
+    ASSERT_EQ(HEADER_SIZE+116, sizeof(PositionEcef));
+    ASSERT_EQ(HEADER_SIZE+48, sizeof(Velocity));
+    ASSERT_EQ(HEADER_SIZE+32+4*MAX_CHAN, sizeof(Dop));
+    ASSERT_EQ(HEADER_SIZE+84, sizeof(UtmPosition));
+    ASSERT_EQ(HEADER_SIZE+60, sizeof(BaselineEcef));
+    ASSERT_EQ(HEADER_SIZE+112, sizeof(IonosphericModel));
+    ASSERT_EQ(44, sizeof(RangeData));
+    ASSERT_EQ(HEADER_SIZE+8+44*MAX_CHAN, sizeof(RangeMeasurements));
+    ASSERT_EQ(24, sizeof(CompressedRangeData));
+    ASSERT_EQ(HEADER_SIZE+8+24*MAX_CHAN, sizeof(CompressedRangeMeasurements));
+    ASSERT_EQ(HEADER_SIZE+228, sizeof(GpsEphemeris));
+    ASSERT_EQ(68, sizeof(SatellitePositionData));
+    ASSERT_EQ(HEADER_SIZE+16+68*MAX_CHAN, sizeof(SatellitePositions));
+    ASSERT_EQ(HEADER_SIZE+48, sizeof(Time_Offset));
+    ASSERT_EQ(HEADER_SIZE+44, sizeof(ReceiverHardwareStatus));
 
-//TEST(StructureSizeTest, StatusStructures) {
-//	ASSERT_EQ(HEADER_SIZE+112, sizeof(Version));
-//}
+}
 
 TEST(DataParsing, Oem4SpanVersion) {
 	// load data file and pass through parse methods
