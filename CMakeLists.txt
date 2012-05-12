@@ -65,12 +65,25 @@ ENDIF(NOT serial_FOUND)
 
 if(serial_FOUND)
   include_directories(${serial_INCLUDE_DIRS})
-  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES} pthread)
+  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES} pthread rt)
 else(serial_FOUND)
   message(FATAL_ERROR "Serial library was not found.")
 endif(serial_FOUND)
 
-## Build the xbow Library
+
+# Find string_utils, if it hasn't already been found
+IF(NOT string_utils_FOUND)
+    find_package(string_utils REQUIRED)
+ENDIF(NOT string_utils_FOUND)
+
+if(string_utils_FOUND)
+  include_directories(${string_utils_INCLUDE_DIRS})
+  list(APPEND NOVATEL_LINK_LIBS ${string_utils_LIBRARIES})
+else(string_utils_FOUND)
+  message(FATAL_ERROR "String Utils library was not found.")
+endif(string_utils_FOUND)
+
+## Build the noavatel Library
 
 # Compile the Library
 add_library(novatel ${NOVATEL_SRCS} ${NOVATEL_HEADERS})

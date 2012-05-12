@@ -56,6 +56,7 @@ namespace novatel{
 
 
 typedef boost::function<double()> GetTimeCallback;
+typedef boost::function<void()> HandleAcknowledgementCallback;
 
 
 class Novatel
@@ -151,16 +152,12 @@ private:
 	void ReadSerialPort();
 
 
-	/*!
-	 * Parses a packet of data from the GPS.  The
-	 */
-	void ParseBinary(char *data, size_t length);
+	void BufferIncomingData(unsigned char *message, unsigned int length);
 
 	/*!
 	 * Parses a packet of data from the GPS.  The
 	 */
-	bool TokenizeAscii(std::string buffer, std::string &packet,
-			std::string &pre, std::string & post );
+	void ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
 
@@ -170,6 +167,20 @@ private:
 	boost::shared_ptr<boost::thread> read_thread_ptr_;
 	bool reading_status_;  //!< True if the read thread is running, false otherwise.
 	GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+
+	HandleAcknowledgementCallback handle_acknowledgement_;
+
+	//////////////////////////////////////////////////////
+	// Incoming data buffers
+	//////////////////////////////////////////////////////
+	unsigned char data_buffer_[MAX_NOUT_SIZE];	//!< data currently being buffered to read
+	unsigned char* data_read_;		//!< used only in BufferIncomingData - declared here for speed
+	size_t bytes_remaining_;	//!< bytes remaining to be read in the current message
+	size_t buffer_index_;		//!< index into data_buffer_
+	size_t header_length_;	//!< length of the current header being read
+	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
+	double read_timestamp_; 		//!< time stamp when last serial port read completed
+	double parse_timestamp_;		//!< time stamp when last parse began
 
 	//////////////////////////////////////////////////////
 	// Receiver capabilities

@@ -1,9 +1,10 @@
 #include "novatel/novatel.h"
 #include <iostream>
 #include <fstream>
+#include <string_utils/string_utils.h>
 using namespace std;
 using namespace novatel;
-#include <boost/tokenizer.hpp>
+
 
 
 /////////////////////////////////////////////////////
@@ -24,11 +25,19 @@ double DefaultGetTime() {
 	return duration.total_seconds();
 }
 
+void DefaultAcknowledgementHandler() {
+    std::cout << "Acknowledgement received." << std::endl;
+}
 
 Novatel::Novatel() {
 	serial_port_=NULL;
 	reading_status_=false;
 	time_handler_ = DefaultGetTime;
+    handle_acknowledgement_=DefaultAcknowledgementHandler;
+	reading_acknowledgement_=false;
+    buffer_index_=0;
+    read_timestamp_=0;
+    parse_timestamp_=0;
 }
 
 Novatel::~Novatel() {
@@ -37,7 +46,9 @@ Novatel::~Novatel() {
 }
 
 bool Novatel::Connect(std::string port, int baudrate) {
-	serial_port_ = new serial::Serial(port,baudrate);
+	//serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
+	serial::Timeout my_timeout(1000,50,0,50,0);
+	serial_port_ = new serial::Serial(port,baudrate,my_timeout);
 
 	if (!serial_port_->isOpen()){
 		std::cout << "Serial port: " << port << " failed to open." << std::endl;
@@ -46,14 +57,13 @@ bool Novatel::Connect(std::string port, int baudrate) {
 		return false;
 	} else {
 		std::cout << "Serial port: " << port << " opened successfully." << std::endl;
-		std::cout << "Searching for Novatel GPS..." << std::endl;
 	}
 
 
 	// stop any incoming data and flush buffers
 	serial_port_->write("UNLOGALL\r\n");
 	// wait for data to stop cominig in
-	boost::this_thread::sleep(boost::posix_time::milliseconds(300));
+	boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 	// clear serial port buffers
 	serial_port_->flush();
 
@@ -80,7 +90,8 @@ void Novatel::Disconnect() {
 
 bool Novatel::Ping(int num_attempts) {
 
-	while (num_attempts-->0) {
+	while ((num_attempts--)>0) {
+		std::cout << "Searching for Novatel receiver..." << std::endl;
 		if (UpdateVersion()) {
 			std::cout << "Found Novatel receiver." << std::endl;
 			std::cout << "\tModel: " << model_ << std::endl;
@@ -122,6 +133,7 @@ bool Novatel::Ping(int num_attempts) {
 
 }
 
+
 bool Novatel::UpdateVersion()
 {
 	// request the receiver version and wait for a response
@@ -131,53 +143,32 @@ bool Novatel::UpdateVersion()
 	//    "2006/Feb/ 9","17:14:33"*5e8df6e0
 
 	// clear port
-	serial_port_->flush();
+	//serial_port_->flush();
 	// send request for version
 	serial_port_->write("log versiona once\r\n");
+	boost::this_thread::sleep(boost::posix_time::milliseconds(250));
 	// read from the serial port until a new line character is seen
-	std::string gps_response = serial_port_->readline(5000);
+	std::string gps_response = serial_port_->read(5000);
 
+	std::vector<std::string> packets;
 
+	string_utils::Tokenize(gps_response, packets, "\n");
+
+	// loop through all packets in file and check for version messages
+	// stop when the first is found or all packets are read
+	for (size_t ii=0; ii<packets.size(); ii++) {
+		if (ParseVersion(packets[ii])) {
+			return true;
+		}
+	}
 
 	return false;
 
 }
 
-/*!
- * Parses a packet of data from the GPS.  The
- */
-bool Novatel::TokenizeAscii(std::string buffer, std::string &packet,
-			std::string &pre, std::string & post )
-{
-	// find start and end of ascii message
-	size_t start_pos=buffer.find("#");
-	size_t end_pos=buffer.find("\r\n");
-
-	if (((start_pos==string::npos)&&(end_pos!=string::npos))||
-			(start_pos>end_pos)){
-		// full message was not found, but the end of a message was found
-		// remove everything before that end
-		pre="";
-		packet="";
-		post=buffer.substr(end_pos+2, buffer.length()-end_pos-2);
-		return false;
-	} else if (((start_pos==string::npos)&&(end_pos==string::npos))) {
-		// full message was not found
-		pre=buffer;
-		packet="";
-		post="";
-		return false;
-	}else{
-		packet = buffer.substr(start_pos,end_pos-start_pos);
-		pre = buffer.substr(0,start_pos);
-		post = buffer.substr(end_pos,buffer.length()-end_pos);
-		return true;
-	}
-}
-
 bool Novatel::ParseVersion(std::string packet) {
 	// parse the results - message should start with "#VERSIONA"
-		size_t found_version=packet.find("VERSIONA");
+        size_t found_version=packet.find("VERSIONA");
 		if (found_version==string::npos)
 			return false;
 
@@ -229,13 +220,13 @@ bool Novatel::ParseVersion(std::string packet) {
 
 		// parse the version:
 		if (hardware_version_.length()>3)
-			protocol_version_=hardware_version_.substr(1,5);
+            protocol_version_=hardware_version_.substr(1,4);
 		else
 			protocol_version_="UNKNOWN";
 
 		// parse model number:
 		// is the receiver capable of raw measurements?
-		if (model_.substr(0,1)=="L")
+        if (model_.find("L")!=string::npos)
 			raw_capable_=true;
 		else
 			raw_capable_=false;
@@ -265,6 +256,13 @@ bool Novatel::ParseVersion(std::string packet) {
 			rtk_capable_=false;
 
 
+        // fix for oem4 span receivers - do not use l12 notation
+        // i think all oem4 spans are l1 l2 capable and raw capable
+        if ((protocol_version_=="OEM4")&&(span_capable_)) {
+            l2_capable_=true;
+            raw_capable_=true;
+        }
+
 		return true;
 
 }
@@ -283,627 +281,150 @@ void Novatel::StopReading() {
 
 
 void Novatel::ReadSerialPort() {
-//	unsigned char buffer[31];
-//	size_t len;
-//	double time_stamp;
-//
-//	Resync();
-//
-//	while (reading_status_) {
-//		len = serial_port_->read(buffer, read_size_);
-//		imu_data_.receive_time = time_handler_();
-//
-//		// check for header and first of packet type
-//		if ((buffer[0]!='U')&&(buffer[1]!='U')&&(buffer[2]!=0x53)) {
-//			Resync();
-//			continue;
-//		}
-//
-//		// parse packet
-//		Parse(buffer+5, buffer[3]);
-//	}
+	unsigned char buffer[MAX_NOUT_SIZE];
+	size_t len;
+	double time_stamp;
+
+	// continuously read data from serial port
+	while (reading_status_) {
+		// read data
+		len = serial_port_->read(buffer, MAX_NOUT_SIZE);
+		// timestamp the read
+		read_timestamp_ = time_handler_();
+		// add data to the buffer to be parsed
+		BufferIncomingData(buffer, len);
+	}
 
 }
 
-//Novatel::Novatel()
-//{
-//	// create mutexes to control access to most recent read data
-//	hBestPOSMutex=CreateMutex(0,false,"BestPOSMutex");
-//	hBestUTMMutex=CreateMutex(0,false,"BestUTMMutex");
-//	hINSPVAMutex=CreateMutex(0,false,"INSPVA Mutex");
-//	hINSPVASMutex=CreateMutex(0,false,"INSPVAS Mutex");
-//	hRawIMUMutex=CreateMutex(0,false,"Raw IMU Mutex");
-//	hRawIMUSMutex=CreateMutex(0,false,"Raw IMU Short Mutex");
-//	hVehicleBodyRotationMutex=CreateMutex(0,false,"Vehicle Body Rotation Mutex");
-//	hBestVelocityMutex=CreateMutex(0,false,"Best Velocity Mutex");
-//	hINSSPDMutex=CreateMutex(0,false,"INS Speed Mutex");
-//	hINSUTMMutex=CreateMutex(0,false,"INS UTM Mutex");
-//	hRXStatusMutex=CreateMutex(0,false,"RX Status Mutex");
-//	hRXStatusEventMutex=CreateMutex(0,false,"RX Status Event Mutex");
-//    hRXHwLevelsMutex=CreateMutex(0,false,"RX Hardware Levels");
-//	hBslnXYZMutex=CreateMutex(0,false,"Baseline Measurment");
-//	hPsrXYZMutex=CreateMutex(0,false,"ECEF Position");
-//
-//	InitializeEvents();
-//
-//	bufIndex=0;
-//	readingACK=false;
-//	dataRead = NULL;
-//
-//	/*bActive=false;
-//	bReading=false;
-//	hReadStarted=CreateEvent(0, false, false, "Read Started");*/
-//
-//}
-//
-//Novatel::~Novatel()
-//{
-//	//comPort.close();
-//
-//	int sz = sizeof(hNovatelEvents);
-//
-//	// close event handles
-//	for (int ii=0; ii<sizeof(hNovatelEvents)/sizeof(HANDLE); ii++)
-//		CloseHandle(hNovatelEvents[ii]);
-//
-//	if(dataRead)
-//		delete[] dataRead;
-//	//CloseHandle(hReadStarted);
-//
-//	// close mutex handles
-//	CloseHandle(hBestPOSMutex);
-//	CloseHandle(hBestUTMMutex);
-//	CloseHandle(hINSPVAMutex);
-//	CloseHandle(hINSPVASMutex);
-//	CloseHandle(hRawIMUMutex);
-//	CloseHandle(hRawIMUSMutex);
-//	CloseHandle(hVehicleBodyRotationMutex);
-//	CloseHandle(hBestVelocityMutex);
-//	CloseHandle(hINSSPDMutex);
-//	CloseHandle(hINSUTMMutex);
-//	CloseHandle(hRXStatusMutex);
-//	CloseHandle(hRXStatusEventMutex);
-//    CloseHandle(hRXHwLevelsMutex);
-//	CloseHandle(hBslnXYZMutex);
-//	CloseHandle(hPsrXYZMutex);
-//}
-//
-//void Novatel::InitializeEvents()
-//{
-//	//// create events to signal when new logs have arrived
-//	hNovatelEvents[NEWBESTPOS] = CreateEvent(0,false,false, NULL);
-//	hNovatelEvents[NEWBESTUTM] = CreateEvent(0,false,false, NULL);
-//	hNovatelEvents[NEWINSPVA] = CreateEvent(0,false,false, NULL);
-//	//hNovatelEvents[NEWINSPVA] = CreateEvent(0,false,false, NULL);
-//	hNovatelEvents[NEWRAWIMU] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWBSLNXYZ] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWRAWIMUS] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWVEHICLEBODYROTATION] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWBESTVELOCITY] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWINSSPD] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWINSUTM] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[CMDACK] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWRXSTATUS] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWRXSTATUSEVENT] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWRXHWLEVELS] = CreateEvent(0,false,false,NULL);
-//	hNovatelEvents[NEWPSRXYZ] = CreateEvent(0,false,false,NULL);
-//}
-//
-//bool Novatel::startedReading()
-//{
-//	//InitializeEvents();
-//	return true;
-//}
-//
-//void Novatel::opened()
-//{
-//	// turn off all logs from GPS
-//	//UnlogAll();
-//}
-//
-//void Novatel::bufferIncomingData(unsigned char *msg, unsigned int length)
-//{
-//
-//	//cout << "Received data: " << dec <<length << endl;
-//	//cout << msg << endl;
-//
-//	// add incoming data to buffer
-//	for (unsigned int i=0; i<length; i++)
-//	{
-//		//cout << hex << (int)msg[i] << endl;
-//		// make sure bufIndex is not larger than buffer
-//		if (bufIndex>=MAX_NOUT_SIZE)
-//		{
-//			bufIndex=0;
-//			MessageDisplay::Instance().DisplayMessage("Novatel: Overflowed receive buffer. Reset",1);
-//		}
-//
-//		if (bufIndex==0)
-//		{	// looking for beginning of message
-//			if (msg[i]==0xAA)
-//			{	// beginning of msg found - add to buffer
-//				dataBuf[bufIndex++]=msg[i];
-//				bytesRemaining=0;
-//			}	// end if (msg[i]
-//			else if (msg[i]=='<')
-//			{
-//				// received beginning of acknowledgement
-//				readingACK=true;
-//				bufIndex=1;
-//			}
-//			else
-//			{
-//				//MessageDisplay::Instance().DisplayMessage("Novatel: Received unknown data.\r\n", 1);
-//			}
-//		} // end if (bufIndex==0)
-//		else if (bufIndex==1)
-//		{	// verify 2nd character of header
-//			if (msg[i]==0x44)
-//			{	// 2nd byte ok - add to buffer
-//				dataBuf[bufIndex++]=msg[i];
-//			}
-//			else if ((msg[i]=='O')&&readingACK)
-//			{
-//				// 2nd byte of acknowledgement
-//				bufIndex=2;
-//			}
-//			else
-//			{
-//				// start looking for new message again
-//				bufIndex=0;
-//				bytesRemaining=0;
-//				readingACK=false;
-//			} // end if (msg[i]==0x44)
-//		}	// end else if (bufIndex==1)
-//		else if (bufIndex==2)
-//		{	// verify 3rd character of header
-//			if (msg[i]==0x12)
-//			{	// 2nd byte ok - add to buffer
-//				dataBuf[bufIndex++]=msg[i];
-//			}
-//			else if ((msg[i]=='K')&&(readingACK))
-//			{
-//				// final byte of acknowledgement received
-//				bufIndex=0;
-//				readingACK=false;
-//				// ACK received
-//				SetEvent(hNovatelEvents[CMDACK]);
-//				//cout << "ACK Received" << endl;
-//			}
-//			else
-//			{
-//				// start looking for new message again
-//				bufIndex=0;
-//				bytesRemaining=0;
-//				readingACK=false;
-//			} // end if (msg[i]==0x12)
-//		}	// end else if (bufIndex==2)
-//		else if (bufIndex==3)
-//		{	// number of bytes in header - not including sync
-//			dataBuf[bufIndex++]=msg[i];
-//			// length of header is in byte 4
-//			hdrLength=msg[i];
-//		}
-//		else if (bufIndex==5)
-//		{	// message id
-//			// add byte to buffer
-//			dataBuf[bufIndex++]=msg[i];
-//			bytesRemaining--;
-//
-//			msgID=((dataBuf[bufIndex-1])<<8)+dataBuf[bufIndex-2];
-//		}
-//		else if (bufIndex==8)
-//		{	// set number of bytes
-//			dataBuf[bufIndex++]=msg[i];
-//			// length of message is in byte 8
-//			// bytes remaining = remainder of header  + 4 byte checksum + length of body
-//			// TODO: added a -2 to make things work right, figure out why i need this
-//			bytesRemaining=msg[i]+4+(hdrLength-7)-2;
-//		}
-//		else if (bytesRemaining==1)
-//		{	// add last byte and parse
-//			dataBuf[bufIndex++]=msg[i];
-//			ParseLog(dataBuf,DecodeBinaryID(msgID));
-//			// reset counters
-//			bufIndex=0;
-//			bytesRemaining=0;
-//		}  // end else if (bytesRemaining==1)
-//		else
-//		{	// add data to buffer
-//			dataBuf[bufIndex++]=msg[i];
-//			bytesRemaining--;
-//		}
-//	}	// end for
-//}
-//
-//void Novatel::ParseLog(unsigned char *log, NOUT_ID logID)
-//{
-//
-//	 //cout << "Parsing Log: " << logID << endl;
-//	//cout << "Parsing Log: " << logID << " => " << parser.GetIDStr(logID) << endl;
-//
-//	switch (logID)
-//	{
-//		case BESTPOSB:
-//			// wait for mutex
-//			WaitForSingleObject(hBestPOSMutex,INFINITE);
-//			// copy data read in into best position structure
-//			memcpy(&curBestPosition, log, sizeof(curBestPosition));
-//			// release mutex
-//			ReleaseMutex(hBestPOSMutex);
-//			// raise event to indicate that new log is available
-//			SetEvent(hNovatelEvents[NEWBESTPOS]);
-//			break;
-//		case BESTUTMB:
-//			// wait for mutex
-//			WaitForSingleObject(hBestUTMMutex,INFINITE);
-//			// copy data read in into best UTM position structure
-//			memcpy(&curBestUTMPosition, log, sizeof(curBestUTMPosition));
-//			// release mutex
-//			ReleaseMutex(hBestUTMMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWBESTUTM]);
-//			break;
-//		case BESTVELB:
-//			// wait for mutex
-//			WaitForSingleObject(hBestVelocityMutex,INFINITE);
-//			// copy data read in into best UTM position structure
-//			memcpy(&curBestVelocity, log, sizeof(curBestVelocity));
-//			// release mutex
-//			ReleaseMutex(hBestVelocityMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWBESTVELOCITY]);
-//			break;
-//		case PSRXYZB:
-//			// wait for mutex
-//			WaitForSingleObject(hPsrXYZMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curPsrXYZ, log, sizeof(curPsrXYZ));
-//			// release mutex
-//			ReleaseMutex(hPsrXYZMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWPSRXYZ]);
-//			break;
-//		case INSPVAB:
-//			// wait for mutex
-//			WaitForSingleObject(hINSPVAMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curINSPosVelAtt, log, sizeof(curINSPosVelAtt));
-//			// release mutex
-//			ReleaseMutex(hINSPVAMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWINSPVA]);
-//			//SetEvent(hNewINSPosVelAtt);
-//			break;
-//		case INSPVASB:
-//			// wait for mutex
-//			WaitForSingleObject(hINSPVASMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curINSPosVelAttShort, log, sizeof(curINSPosVelAttShort));
-//			// release mutex
-//			ReleaseMutex(hINSPVASMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWINSPVA]);
-//			break;
-//		case RAWIMUB:
-//			// wait for mutex
-//			WaitForSingleObject(hRawIMUMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curRawIMU, log, sizeof(curRawIMU));
-//			// release mutex
-//			ReleaseMutex(hRawIMUMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWRAWIMU]);
-//			break;
-//		case BSLNXYZB:
-//			// wait for mutex
-//			WaitForSingleObject(hBslnXYZMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curBslnXYZ, log, sizeof(curBslnXYZ));
-//			// release mutex
-//			ReleaseMutex(hBslnXYZMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWBSLNXYZ]);
-//			break;
-//		case RAWIMUSB:
-//			// wait for mutex
-//			WaitForSingleObject(hRawIMUSMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curRawIMUS, log, sizeof(curRawIMUS));
-//			// release mutex
-//			ReleaseMutex(hRawIMUSMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWRAWIMUS]);
-//			break;
-//		case VEHICLEBODYROTATIONB:
-//			// wait for mutex
-//			WaitForSingleObject(hVehicleBodyRotationMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curVehicleBodyRotation, log, sizeof(curVehicleBodyRotation));
-//			// release mutex
-//			ReleaseMutex(hVehicleBodyRotationMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWVEHICLEBODYROTATION]);
-//			break;
-//		case INSSPDB:
-//			// wait for mutex
-//			WaitForSingleObject(hINSSPDMutex,INFINITE);
-//			// copy data read in into structure
-//			memcpy(&curINSSPD, log, sizeof(curINSSPD));
-//			// release mutex
-//			ReleaseMutex(hINSSPDMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWINSSPD]);
-//			break;
-//		case INSUTMB:
-//			// wait for mutex
-//			WaitForSingleObject(hINSUTMMutex,INFINITE);
-//			// copy data read in into best UTM position structure
-//			memcpy(&curINSUTM, log, sizeof(curINSUTM));
-//			// release mutex
-//			ReleaseMutex(hINSUTMMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWINSUTM]);
-//			break;
-//		case RXSTATUSB:
-//			// wait for mutex
-//			WaitForSingleObject(hRXStatusMutex,INFINITE);
-//			// copy data read in into rxstatus structure
-//			memcpy(&curRXStatus, log, sizeof(curRXStatus));
-//			// release mutex
-//			ReleaseMutex(hRXStatusMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWRXSTATUS]);
-//			break;
-//		case RXSTATUSEVENTB:
-//			// wait for mutex
-//			WaitForSingleObject(hRXStatusEventMutex,INFINITE);
-//			// copy data read in into rx status event structure
-//			memcpy(&curRXStatusEvent, log, sizeof(curRXStatusEvent));
-//			// release mutex
-//			ReleaseMutex(hRXStatusEventMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWRXSTATUSEVENT]);
-//			break;
-//		case RXHWLEVELSB:
-//			// wait for mutex
-//			WaitForSingleObject(hRXHwLevelsMutex,INFINITE);
-//			// copy data read in into rx hw levels structure
-//			memcpy(&curRXHwLevels, log, sizeof(curRXHwLevels));
-//			// release mutex
-//			ReleaseMutex(hRXHwLevelsMutex);
-//			// set event to indicate new log has arrived
-//			SetEvent(hNovatelEvents[NEWRXHWLEVELS]);
-//			break;
-//		case INVALID_IN_DATA:
-//			MessageDisplay::Instance().DisplayMessage("SPAN.cpp: Invalid command received",1);
-//			break;
-//		default:
-//			MessageDisplay::Instance().DisplayMessage("Unrecognized GPS message received.",1);
-//			break;
-//
-//	}
-//}
-//
-//BestPosition Novatel::getLastBestPOS()
-//{
-//	BestPosition temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hBestPOSMutex,INFINITE);
-//	// get copy of structure
-//	temp = curBestPosition;
-//	// release mutex
-//	ReleaseMutex(hBestPOSMutex);
-//	// return structure
-//	return temp;
-//
-//}
-//
-//BestUTMPosition Novatel::getLastBestUTM()
-//{
-//	BestUTMPosition temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hBestUTMMutex,INFINITE);
-//	// get copy of structure
-//	temp = curBestUTMPosition;
-//	// release mutex
-//	ReleaseMutex(hBestUTMMutex);
-//	// return structure
-//	return temp;
-//
-//}
-//
-//BestVelocity Novatel::getLastBestVelocity()
-//{
-//	BestVelocity temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hBestVelocityMutex,INFINITE);
-//	// get copy of structure
-//	temp = curBestVelocity;
-//	// release mutex
-//	ReleaseMutex(hBestVelocityMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//
-//INSPVA Novatel::getLastINSPosVelAtt()
-//{
-//	INSPVA temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hINSPVAMutex,INFINITE);
-//	// get copy of structure
-//	temp = curINSPosVelAtt;
-//	// release mutex
-//	ReleaseMutex(hINSPVAMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//PsrXYZ Novatel::getLastPsrXYZ()
-//{
-//	PsrXYZ temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hPsrXYZMutex,INFINITE);
-//	// get copy of structure
-//	temp = curPsrXYZ;
-//	// release mutex
-//	ReleaseMutex(hPsrXYZMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//INSPVAS Novatel::getLastINSPosVelAttShort()
-//{
-//	INSPVAS temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hINSPVASMutex,INFINITE);
-//	// get copy of structure
-//	temp = curINSPosVelAttShort;
-//	// release mutex
-//	ReleaseMutex(hINSPVASMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//RawIMU Novatel::getLastRawIMU()
-//{
-//	RawIMU temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hRawIMUMutex,INFINITE);
-//	// get copy of structure
-//	temp = curRawIMU;
-//	// release mutex
-//	ReleaseMutex(hRawIMUMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//bslnxyz Novatel::getLastBslnXYZ()
-//{
-//	bslnxyz temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hBslnXYZMutex,INFINITE);
-//	// get copy of structure
-//	temp = curBslnXYZ;
-//	// release mutex
-//	ReleaseMutex(hBslnXYZMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//RawIMUS Novatel::getLastRawIMUS()
-//{
-//	RawIMUS temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hRawIMUSMutex,INFINITE);
-//	// get copy of structure
-//	temp = curRawIMUS;
-//	// release mutex
-//	ReleaseMutex(hRawIMUSMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//INSSPD Novatel::getLastINSSpeed()
-//{
-//	INSSPD temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hINSSPDMutex,INFINITE);
-//	// get copy of structure
-//	temp = curINSSPD;
-//	// release mutex
-//	ReleaseMutex(hINSSPDMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//INSUTM Novatel::getLastINSUTM()
-//{
-//	INSUTM temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hINSUTMMutex,INFINITE);
-//	// get copy of structure
-//	temp = curINSUTM;
-//	// release mutex
-//	ReleaseMutex(hINSUTMMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//VehicleBodyRotation Novatel::getLastVehicleBodyRotation()
-//{
-//	VehicleBodyRotation temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hVehicleBodyRotationMutex,INFINITE);
-//	// get copy of structure
-//	temp = curVehicleBodyRotation;
-//	// release mutex
-//	ReleaseMutex(hVehicleBodyRotationMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//RXStatus Novatel::getLastRXStatus()
-//{
-//	RXStatus temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hRXStatusMutex,INFINITE);
-//	// get copy of structure
-//	temp = curRXStatus;
-//	// release mutex
-//	ReleaseMutex(hRXStatusMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//RXStatusEvent Novatel::getLastRXStatusEvent()
-//{
-//	RXStatusEvent temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hRXStatusEventMutex,INFINITE);
-//	// get copy of structure
-//	temp = curRXStatusEvent;
-//	// release mutex
-//	ReleaseMutex(hRXStatusEventMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//RXHwLevels Novatel::getLastRXHwLevels()
-//{
-//	RXHwLevels temp;
-//
-//	// get exclusive access to structure
-//	WaitForSingleObject(hRXHwLevelsMutex,INFINITE);
-//	// get copy of structure
-//	temp = curRXHwLevels;
-//	// release mutex
-//	ReleaseMutex(hRXHwLevelsMutex);
-//	// return structure
-//	return temp;
-//}
-//
-//bool Novatel::UnlogAll()
-//{
-//	MessageDisplay::Instance().DisplayMessage("SPAN: Stopping all GPS messages",0);
-//	return sendString("UNLOGALL\r\n");
-//	//return true;
-//}
+
+void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
+{
+
+	//cout << "Received data: " << dec <<length << endl;
+	//cout << msg << endl;
+
+	// add incoming data to buffer
+	for (unsigned int ii=0; ii<length; ii++)
+	{
+		//cout << hex << (int)msg[i] << endl;
+		// make sure bufIndex is not larger than buffer
+		if (buffer_index_>=MAX_NOUT_SIZE)
+		{
+			buffer_index_=0;
+			std::cout << "Novatel: Overflowed receive buffer. Reset" << std::endl;
+		}
+
+		if (buffer_index_==0)
+		{	// looking for beginning of message
+			if (message[ii]==0xAA)
+			{	// beginning of msg found - add to buffer
+				data_buffer_[buffer_index_++]=message[ii];
+				bytes_remaining_=0;
+			}	// end if (msg[ii]
+			else if (message[ii]=='<')
+			{
+				// received beginning of acknowledgement
+				reading_acknowledgement_=true;
+				buffer_index_=1;
+			}
+			else
+			{
+				//MessageDisplay::Instance().DisplayMessage("Novatel: Received unknown data.\r\n", 1);
+			}
+		} // end if (bufIndex==0)
+		else if (buffer_index_==1)
+		{	// verify 2nd character of header
+			if (message[ii]==0x44)
+			{	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++]=message[ii];
+			}
+			else if ((message[ii]=='O')&&reading_acknowledgement_)
+			{
+				// 2nd byte of acknowledgement
+				buffer_index_=2;
+			}
+			else
+			{
+				// start looking for new message again
+				buffer_index_=0;
+				bytes_remaining_=0;
+				reading_acknowledgement_=false;
+			} // end if (msg[i]==0x44)
+		}	// end else if (bufIndex==1)
+		else if (buffer_index_==2)
+		{	// verify 3rd character of header
+			if (message[ii]==0x12)
+			{	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++]=message[ii];
+			}
+			else if ((message[ii]=='K')&&(reading_acknowledgement_))
+			{
+				// final byte of acknowledgement received
+				buffer_index_=0;
+				reading_acknowledgement_=false;
+				// ACK received
+				handle_acknowledgement_();
+			}
+			else
+			{
+				// start looking for new message again
+				buffer_index_=0;
+				bytes_remaining_=0;
+				reading_acknowledgement_=false;
+			} // end if (msg[i]==0x12)
+		}	// end else if (bufIndex==2)
+		else if (buffer_index_==3)
+		{	// number of bytes in header - not including sync
+			data_buffer_[buffer_index_++]=message[ii];
+			// length of header is in byte 4
+			header_length_=message[ii];
+		}
+		else if (buffer_index_==8)
+		{	// set number of bytes
+			data_buffer_[buffer_index_++]=message[ii];
+			// length of message is in byte 8
+			// bytes remaining = remainder of header  + 4 byte checksum + length of body
+			// TODO: added a -2 to make things work right, figure out why i need this
+			bytes_remaining_=message[ii]+4+(header_length_-7)-2;
+		}
+		else if (bytes_remaining_==1)
+		{	// add last byte and parse
+			data_buffer_[buffer_index_++]=message[ii];
+			BINARY_LOG_TYPE message_id=(BINARY_LOG_TYPE)(((data_buffer_[5])<<8)+data_buffer_[4]);
+			ParseBinary(data_buffer_,message_id);
+			// reset counters
+			buffer_index_=0;
+			bytes_remaining_=0;
+		}  // end else if (bytesRemaining==1)
+		else
+		{	// add data to buffer
+			data_buffer_[buffer_index_++]=message[ii];
+			bytes_remaining_--;
+		}
+	}	// end for
+}
+
+void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
+{
+	cout << "Parsing Log: " << message_id << endl;
+	//cout << "Parsing Log: " << logID << " => " << parser.GetIDStr(logID) << endl;
+
+    switch (message_id) {
+        case BESTPOSB_LOG_TYPE:
+            BestPosition best_position;
+            memcpy(&best_position, message, sizeof(best_position));
+            std::cout << "Parsed bestpos" << std::endl;
+            break;
+
+        default:
+            break;
+    }
+
+
+}
+
+
 //
 //NOUT_ID Novatel::DecodeBinaryID(unsigned int msgID)  // Member function to identify the log
 //{
@@ -1681,139 +1202,5 @@ void Novatel::ReadSerialPort() {
 //
 //   return iId;
 //}
-//
-////bool Novatel::Initialize(int comPortNumber,int baudRate)
-////{
-////	return Initialize(comPortNumber, baudRate,8,NOPARITY,ONESTOPBIT);
-////}
-//
-////bool Novatel::Initialize(int comPortNumber,int baudRate, int byteSize,int parity,int stopSits)
-////{
-////	// attempt to initialze com port
-////	if (!comPort.init(comPortNumber,baudRate,byteSize,parity,stopSits))
-////	{	// com port init'd successfully
-////		bActive = true;
-////		evtInitialized();
-////	}
-////	else
-////	{	// com port failed to init
-////		bActive=false;
-////	}
-////
-////	return bActive;
-////
-////}
-//
-////bool Novatel::StartReading()
-////{
-////	if (bReading)
-////		return true;
-////
-////	// make sure com port is active before starting read thread
-////	if (bActive)
-////	{
-////		//allocate buffer for the thread.
-////		dataRead = new unsigned char[2001];
-////		// start thread to listen for incoming com messages
-////		hReadThread = CreateThread(0,0,ComPortListenThread,this,0,0);
-////		// wait for read thread to start
-////		WaitForSingleObject(hReadStarted,INFINITE);
-////		bReading = true;
-////		evtStartedReading();
-////	}
-////	else
-////		bReading=false;
-////
-////	return bReading;
-////}
-//
-////bool Novatel::StopReading()
-////{
-////
-////	if (bReading)
-////	{
-////		bReading=false;
-////		// stop read thread - exit normally (return code 0)
-////		TerminateThread(hReadThread,0);
-////		if(dataRead)
-////			delete[] dataRead;
-////		dataRead = NULL;
-////		evtStoppedReading();
-////	}
-////	return !bReading;
-////}
-//
-////void Novatel::ComListen()
-////{
-////	// number of bytes read in on last read
-////	int bytesRead;
-////	// character array to hold data read from com port
-////	//dataRead = new unsigned char[2000];
-////
-////	//cout << "Read thread started." << endl;
-////
-////	SetEvent(hReadStarted);
-////
-////	for (;;)
-////	{
-////		// wait for new data to arrive on the com port
-////		//bytesRead=comPort.read_next_string(2000,(char*)dataRead);
-////		bytesRead=comPort.read_next_string(2000,(char*)dataRead);
-////
-////		cout << dataRead << endl;
-////
-////		if (bytesRead>0)
-////			BufferIncomingData(dataRead, bytesRead);
-////		else
-////			StopReading();
-////	}
-////
-////}
-////
-////bool Novatel::SendMessage(char* msg, unsigned int length)
-////{
-////	unsigned int bytesWritten;
-////
-////	// make sure com port is active before attempting to write to it
-////	if (!bActive)
-////		return false;
-////
-////	// write message
-////	bytesWritten=comPort.write_bytes(msg,length);
-////
-////	// make sure all bytes were written
-////	return (bytesWritten==length);
-////}
-//
-////bool Novatel::SendString(char *msg)
-////{
-////	int bytesWritten;
-////
-////	// make sure com port is active before attempting to write to it
-////	if (!bActive)
-////		return false;
-////
-////	// write message
-////	bytesWritten=comPort.write_string(msg);
-////
-////	// make sure all bytes were written
-////	return (bytesWritten>0);
-////}
-//
-//
-////bool Novatel::Shutdown()
-////{
-////	comPort.close();
-////
-////	return true;
-////}
-//
-//void Novatel::closed()
-//{
-//	MessageDisplay::Instance().DisplayMessage("Device Shutdown.",0);
-//}
-//bool Novatel::stoppedReading()
-//{
-//	MessageDisplay::Instance().DisplayMessage("Stopped Reading Device.",0);
-//	return true;
-//}
+
+
