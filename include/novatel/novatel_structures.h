@@ -790,7 +790,7 @@ struct SatellitePositions {
  * UTC time = GPS time + offset + UTC offset
  */
 PACK(
-struct Time_Offset {
+struct TimeOffset {
     Oem4BinaryHeader header;			//!< Message header
     uint32_t clock_model_status;        //!< ClockModelStatus
     double offset;                      //!< Receiver Offset in seconds from GPS time

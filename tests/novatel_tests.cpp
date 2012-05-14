@@ -44,7 +44,7 @@ TEST(StructureSizeTest, GPSMessageStructures) {
     ASSERT_EQ(HEADER_SIZE+228, sizeof(GpsEphemeris));
     ASSERT_EQ(68, sizeof(SatellitePositionData));
     ASSERT_EQ(HEADER_SIZE+16+68*MAX_CHAN, sizeof(SatellitePositions));
-    ASSERT_EQ(HEADER_SIZE+48, sizeof(Time_Offset));
+    ASSERT_EQ(HEADER_SIZE+48, sizeof(TimeOffset));
     ASSERT_EQ(HEADER_SIZE+44, sizeof(ReceiverHardwareStatus));
 
 }
