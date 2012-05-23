@@ -636,7 +636,7 @@ struct RangeData {
     uint16_t glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
     double pseudorange;                      //!<  pseudorange [m]
     float pseudorange_standard_deviation;    //!< pseudorange standard deviation [m]
-    double accumulated_dopplier;             //!< accumulated doppler [cycles]
+    double accumulated_doppler;             //!< accumulated doppler [cycles]
     float accumulated_doppler_std_deviation; //!< accumulated doppler standard deviation [cycles]
     float doppler;                           //!< Doppler frequency [Hz]
     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]

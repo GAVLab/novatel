@@ -30,7 +30,6 @@ void DefaultAcknowledgementHandler() {
     std::cout << "Acknowledgement received." << std::endl;
 }
 
-
 inline void DefaultDebugMsgCallback(const std::string &msg) {
     std::cout << "Novatel Debug: " << msg << std::endl;
 }
@@ -47,12 +46,12 @@ inline void DefaultErrorMsgCallback(const std::string &msg) {
     std::cout << "Novatel Error: " << msg << std::endl;
 }
 
-void DefaultBestPositionCallback(Position best_position){
+void DefaultBestPositionCallback(Position best_position, double time_stamp){
     std:: cout << "BESTPOS: \nGPS Week: " << best_position.header.gps_week <<
                   "  GPS milliseconds: " << best_position.header.gps_millisecs << std::endl <<
-                  "Latitude: " << best_position.latitude << std::endl <<
-                  "Longitude: " << best_position.longitude << std::endl <<
-                  "Height: " << best_position.height << std::endl << std::endl;
+                  "  Latitude: " << best_position.latitude << std::endl <<
+                  "  Longitude: " << best_position.longitude << std::endl <<
+                  "  Height: " << best_position.height << std::endl << std::endl;
 }
 
 Novatel::Novatel() {
@@ -72,8 +71,7 @@ Novatel::Novatel() {
 }
 
 Novatel::~Novatel() {
-
-
+    Disconnect();
 }
 
 bool Novatel::Connect(std::string port, int baudrate) {
@@ -173,7 +171,6 @@ bool Novatel::Ping(int num_attempts) {
 	return false;
 
 }
-
 
 bool Novatel::UpdateVersion()
 {
@@ -306,7 +303,6 @@ bool Novatel::ParseVersion(std::string packet) {
 
 }
 
-
 void Novatel::StartReading() {
 	// create thread to read from sensor
 	reading_status_=true;
@@ -318,11 +314,9 @@ void Novatel::StopReading() {
 	reading_status_=false;
 }
 
-
 void Novatel::ReadSerialPort() {
 	unsigned char buffer[MAX_NOUT_SIZE];
 	size_t len;
-	double time_stamp;
 
 	// continuously read data from serial port
 	while (reading_status_) {
@@ -336,17 +330,12 @@ void Novatel::ReadSerialPort() {
 
 }
 
-
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
-
-	//cout << "Received data: " << dec <<length << endl;
-	//cout << msg << endl;
 
 	// add incoming data to buffer
 	for (unsigned int ii=0; ii<length; ii++)
 	{
-		//cout << hex << (int)msg[i] << endl;
 		// make sure bufIndex is not larger than buffer
 		if (buffer_index_>=MAX_NOUT_SIZE)
 		{
@@ -451,12 +440,131 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
     log_debug_(output.str());
 
     switch (message_id) {
-        case BESTPOSB_LOG_TYPE:
-            Position best_position;
-            memcpy(&best_position, message, sizeof(best_position));
-            best_position_callback_(best_position);
+        case BESTGPSPOS_LOG_TYPE:
+            Position best_gps;
+            memcpy(&best_gps, message, sizeof(best_gps));
+            best_gps_position_callback_(best_gps, read_timestamp_);
             break;
-
+        case BESTLEVERARM_LOG_TYPE:
+            BestLeverArm best_lever;
+            memcpy(&best_lever, message, sizeof(best_lever));
+            best_lever_arm_callback_(best_lever, read_timestamp_);
+            break;
+        case BESTPOSB_LOG_TYPE:
+            Position best_pos;
+            memcpy(&best_pos, message, sizeof(best_pos));
+            best_position_callback_(best_pos, read_timestamp_);
+            break;
+        case BESTUTMB_LOG_TYPE:
+            UtmPosition best_utm;
+            memcpy(&best_utm, message, sizeof(best_utm));
+            best_utm_position_callback_(best_utm, read_timestamp_);
+            break;
+        case BESTVELB_LOG_TYPE:
+            Velocity best_vel;
+            memcpy(&best_vel, message, sizeof(best_vel));
+            best_velocity_callback_(best_vel, read_timestamp_);
+            break;
+        case BESTXYZB_LOG_TYPE:
+            PositionEcef best_xyz;
+            memcpy(&best_xyz, message, sizeof(best_xyz));
+            best_position_ecef_callback_(best_xyz, read_timestamp_);
+            break;
+        case INSPVA_LOG_TYPE:
+            InsPositionVelocityAttitude ins_pva;
+            memcpy(&ins_pva, message, sizeof(ins_pva));
+            ins_position_velocity_attitude_callback_(ins_pva, read_timestamp_);
+            break;
+        case VEHICLEBODYROTATION_LOG_TYPE:
+            VehicleBodyRotation vehicle_body_rotation;
+            memcpy(&vehicle_body_rotation, message, sizeof(vehicle_body_rotation));
+            vehicle_body_rotation_callback_(vehicle_body_rotation, read_timestamp_);
+            break;
+        case INSSPD_LOG_TYPE:
+            InsSpeed ins_speed;
+            memcpy(&ins_speed, message, sizeof(ins_speed));
+            ins_speed_callback_(ins_speed, read_timestamp_);
+            break;
+        case RAWIMU_LOG_TYPE:
+            RawImu raw_imu;
+            memcpy(&raw_imu, message, sizeof(raw_imu));
+            raw_imu_callback_(raw_imu, read_timestamp_);
+            break;
+        case RAWIMUS_LOG_TYPE:
+            RawImuShort raw_imu_s;
+            memcpy(&raw_imu_s, message, sizeof(raw_imu_s));
+            raw_imu_short_callback_(raw_imu_s, read_timestamp_);
+            break;
+        case INSCOV_LOG_TYPE:
+            InsCovariance ins_cov;
+            memcpy(&ins_cov, message, sizeof(ins_cov));
+            ins_covariance_callback_(ins_cov, read_timestamp_);
+            break;
+        case INSCOVS_LOG_TYPE:
+            InsCovarianceShort ins_cov_s;
+            memcpy(&ins_cov_s, message, sizeof(ins_cov_s));
+            ins_covariance_short_callback_(ins_cov_s, read_timestamp_);
+            break;
+        case PSRDOPB_LOG_TYPE:
+            Dop psr_dop;
+            memcpy(&psr_dop, message, sizeof(psr_dop));
+            pseudorange_dop_callback_(psr_dop, read_timestamp_);
+            break;
+        case RTKDOPB_LOG_TYPE:
+            Dop rtk_dop;
+            memcpy(&rtk_dop, message, sizeof(rtk_dop));
+            rtk_dop_callback_(rtk_dop, read_timestamp_);
+            break;
+        case BSLNXYZ_LOG_TYPE:
+            BaselineEcef baseline_xyz;
+            memcpy(&baseline_xyz, message, sizeof(baseline_xyz));
+            baseline_ecef_callback_(baseline_xyz, read_timestamp_);
+            break;
+        case IONUTCB_LOG_TYPE:
+            IonosphericModel ion;
+            memcpy(&ion, message, sizeof(ion));
+            ionospheric_model_callback_(ion, read_timestamp_);
+            break;
+        case RANGEB_LOG_TYPE:
+            RangeMeasurements ranges;
+            memcpy(&ranges, message, sizeof(ranges));
+            range_measurements_callback_(ranges, read_timestamp_);
+            break;
+        case RANGECMPB_LOG_TYPE:
+            CompressedRangeMeasurements cmp_ranges;
+            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
+            compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+            break;
+        case GPSEPHEMB_LOG_TYPE:
+            GpsEphemeris ephemeris;
+            memcpy(&ephemeris, message, sizeof(ephemeris));
+            gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            break;
+        case SATXYZB_LOG_TYPE:
+            SatellitePositions sat_pos;
+            memcpy(&sat_pos, message, sizeof(sat_pos));
+            satellite_positions_callback_(sat_pos, read_timestamp_);
+            break;
+        case TIMEB_LOG_TYPE:
+            TimeOffset time_offset;
+            memcpy(&time_offset, message, sizeof(time_offset));
+            time_offset_callback_(time_offset, read_timestamp_);
+            break;
+        case RXHWLEVELSB_LOG_TYPE:
+            ReceiverHardwareStatus hw_levels;
+            memcpy(&hw_levels, message, sizeof(hw_levels));
+            receiver_hardware_status_callback_(hw_levels, read_timestamp_);
+            break;
+        case PSRPOSB_LOG_TYPE:
+            Position psr_pos;
+            memcpy(&psr_pos, message, sizeof(psr_pos));
+            best_pseudorange_position_callback_(psr_pos, read_timestamp_);
+            break;
+        case RTKPOSB_LOG_TYPE:
+            Position rtk_pos;
+            memcpy(&rtk_pos, message, sizeof(rtk_pos));
+            rtk_position_callback_(rtk_pos, read_timestamp_);
+            break;
         default:
             break;
     }

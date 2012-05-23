@@ -65,34 +65,34 @@ typedef boost::function<void(const std::string&)> WarningMsgCallback;
 typedef boost::function<void(const std::string&)> ErrorMsgCallback;
 
 // INS Specific Callbacks
-typedef boost::function<void(InsPositionVelocityAttitude&)> InsPositionVelocityAttitudeCallback;
-typedef boost::function<void(InsPositionVelocityAttitudeShort&)> InsPositionVelocityAttitudeShortCallback;
-typedef boost::function<void(VehicleBodyRotation&)> VehicleBodyRotationCallback;
-typedef boost::function<void(InsSpeed&)> InsSpeedCallback;
-typedef boost::function<void(RawImu&)> RawImuCallback;
-typedef boost::function<void(RawImuShort&)> RawImuShortCallback;
-typedef boost::function<void(Position&)> BestGpsPositionCallback;
-typedef boost::function<void(BestLeverArm&)> BestLeverArmCallback;
-typedef boost::function<void(InsCovariance&)> InsCovarianceCallback;
-typedef boost::function<void(InsCovarianceShort&)> InsCovarianceShortCallback;
+typedef boost::function<void(InsPositionVelocityAttitude&, double&)> InsPositionVelocityAttitudeCallback;
+typedef boost::function<void(InsPositionVelocityAttitudeShort&, double&)> InsPositionVelocityAttitudeShortCallback;
+typedef boost::function<void(VehicleBodyRotation&, double&)> VehicleBodyRotationCallback;
+typedef boost::function<void(InsSpeed&, double&)> InsSpeedCallback;
+typedef boost::function<void(RawImu&, double&)> RawImuCallback;
+typedef boost::function<void(RawImuShort&, double&)> RawImuShortCallback;
+typedef boost::function<void(Position&, double&)> BestGpsPositionCallback;
+typedef boost::function<void(BestLeverArm&, double&)> BestLeverArmCallback;
+typedef boost::function<void(InsCovariance&, double&)> InsCovarianceCallback;
+typedef boost::function<void(InsCovarianceShort&, double&)> InsCovarianceShortCallback;
 
 // GPS Callbacks
-typedef boost::function<void(UtmPosition&)> BestUtmPositionCallback;
-typedef boost::function<void(Velocity&)> BestVelocityCallback;
-typedef boost::function<void(PositionEcef&)> BestPositionEcefCallback;
-typedef boost::function<void(Dop&)> PseudorangeDopCallback;
-typedef boost::function<void(Dop&)> RtkDopCallback;
-typedef boost::function<void(BaselineEcef&)> BaselineEcefCallback;
-typedef boost::function<void(IonosphericModel&)> IonosphericModelCallback;
-typedef boost::function<void(RangeMeasurements&)> RangeMeasurementsCallback;
-typedef boost::function<void(CompressedRangeMeasurements&)> CompressedRangeMeasurementsCallback;
-typedef boost::function<void(GpsEphemeris&)> GpsEphemerisCallback;
-typedef boost::function<void(SatellitePositions&)> SatellitePositionsCallback;
-typedef boost::function<void(TimeOffset&)> TimeOffsetCallback;
-typedef boost::function<void(ReceiverHardwareStatus&)> ReceiverHardwareStatusCallback;
-typedef boost::function<void(Position&)> BestPositionCallback;
-typedef boost::function<void(Position&)> BestPseudorangePositionCallback;
-typedef boost::function<void(Position&)> BestRtkPositionCallback;
+typedef boost::function<void(UtmPosition&, double&)> BestUtmPositionCallback;
+typedef boost::function<void(Velocity&, double&)> BestVelocityCallback;
+typedef boost::function<void(PositionEcef&, double&)> BestPositionEcefCallback;
+typedef boost::function<void(Dop&, double&)> PseudorangeDopCallback;
+typedef boost::function<void(Dop&, double&)> RtkDopCallback;
+typedef boost::function<void(BaselineEcef&, double&)> BaselineEcefCallback;
+typedef boost::function<void(IonosphericModel&, double&)> IonosphericModelCallback;
+typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCallback;
+typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
+typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
+typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
+typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
+typedef boost::function<void(ReceiverHardwareStatus&, double&)> ReceiverHardwareStatusCallback;
+typedef boost::function<void(Position&, double&)> BestPositionCallback;
+typedef boost::function<void(Position&, double&)> BestPseudorangePositionCallback;
+typedef boost::function<void(Position&, double&)> RtkPositionCallback;
 
 
 class Novatel
@@ -248,7 +248,7 @@ private:
     TimeOffsetCallback time_offset_callback_;
     ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
     BestPseudorangePositionCallback best_pseudorange_position_callback_;
-    BestRtkPositionCallback best_rtk_position_callback_;
+    RtkPositionCallback rtk_position_callback_;
 
 
 
