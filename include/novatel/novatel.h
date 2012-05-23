@@ -58,6 +58,12 @@ namespace novatel{
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
 
+// Messaging callbacks
+typedef boost::function<void(const std::string&)> DebugMsgCallback;
+typedef boost::function<void(const std::string&)> InfoMsgCallback;
+typedef boost::function<void(const std::string&)> WarningMsgCallback;
+typedef boost::function<void(const std::string&)> ErrorMsgCallback;
+
 // INS Specific Callbacks
 typedef boost::function<void(InsPositionVelocityAttitude&)> InsPositionVelocityAttitudeCallback;
 typedef boost::function<void(InsPositionVelocityAttitudeShort&)> InsPositionVelocityAttitudeShortCallback;
@@ -191,14 +197,26 @@ private:
 
 	bool ParseVersion(std::string packet);
 
+    //////////////////////////////////////////////////////
+    // Serial port reading members
+    //////////////////////////////////////////////////////
 	//! Serial port object for communicating with sensor
 	serial::Serial *serial_port_;
 	//! shared pointer to Boost thread for listening for data from novatel
 	boost::shared_ptr<boost::thread> read_thread_ptr_;
 	bool reading_status_;  //!< True if the read thread is running, false otherwise.
-	GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
 
-	HandleAcknowledgementCallback handle_acknowledgement_;
+    //////////////////////////////////////////////////////
+    // Diagnostic Callbacks
+    //////////////////////////////////////////////////////
+    HandleAcknowledgementCallback handle_acknowledgement_;
+    DebugMsgCallback log_debug_;
+    InfoMsgCallback log_info_;
+    WarningMsgCallback log_warning_;
+    ErrorMsgCallback log_error_;
+
+    GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+
 
     //////////////////////////////////////////////////////
     // New Data Callbacks
@@ -247,7 +265,7 @@ private:
 	double parse_timestamp_;		//!< time stamp when last parse began
 
 	//////////////////////////////////////////////////////
-	// Receiver capabilities
+    // Receiver information and capabilities
 	//////////////////////////////////////////////////////
 	std::string protocol_version_;		//!< Receiver version, OEM4, OEMV, OEM6, or UNKNOWN
 	std::string serial_number_; //!< Receiver serial number
