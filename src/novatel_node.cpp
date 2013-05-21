@@ -62,10 +62,41 @@ public:
     gps_.setLogErrorCallback(handleErrorMessages);
     gps_.setLogDebugCallback(handleDebugMessages);
 
+    gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
+    gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
+    gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
+    gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
+    gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
+    gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
+
   }
 
   ~NovatelNode() {
     this->disconnect();
+  }
+
+  void BestUtmHandler(UtmPosition &pos, double &timestamp) {
+
+  }
+
+  void BestVelocityHandler(Velocity&, double&) {
+
+  }
+
+  void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
+
+  }
+
+  void RawImuHandler(RawImuShort &imu, double &timestamp) {
+
+  }
+
+  void InsCovHandler(InsCovarianceShort &cov, double &timestamp) {
+
+  }
+
+  void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
+
   }
 
   //void HandleEmData(EM61MK2Data &data) {
