@@ -24,9 +24,10 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <algorithm>
+#include <string>
 
 #include <ros/ros.h>
-#include <string>
 
 #ifdef WIN32
  #ifdef DELETE
@@ -36,6 +37,8 @@
  #endif
 #endif
 #include "nav_msgs/Odometry.h"
+#include "sensor_msgs/NavSatFix.h"
+#include "sensor_msgs/NavSatStatus.h"
 
 #include "novatel/novatel.h"
 using namespace novatel;
@@ -92,6 +95,29 @@ public:
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
+
+    // configure default log sets
+    if (gps_default_logs_period_>0) {
+      // request default set of gps logs at given rate
+      // convert rate to string
+      std::stringstream default_logs;
+      default_logs.precision(2);
+      default_logs << "LOG BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "LOG BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
+      gps_.ConfigureLogs(default_logs.str());
+    }
+
+    if (span_default_logs_period_>0) {
+      // request default set of gps logs at given rate
+      // convert rate to string
+      std::stringstream default_logs;
+      default_logs.precision(2);
+      default_logs << "LOG INSPVAB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "LOG INSCOVB ONTIME " << std::fixed << gps_default_logs_period_;
+      gps_.ConfigureLogs(default_logs.str());
+    }
+
+    // configure additional logs
     gps_.ConfigureLogs(log_commands_);
 
     ros::spin();
@@ -120,6 +146,13 @@ protected:
     nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
     ROS_INFO_STREAM("Log Commands: " << log_commands_);
 
+    nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
+    ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
+
+    nh_.param("span_default_logs_period", gps_default_logs_period_, 0.05);
+    ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
+
+
     return true;
   }
 
@@ -134,6 +167,8 @@ protected:
   std::string odom_topic_;
   std::string port_;
   std::string log_commands_;
+  double gps_default_logs_period_;
+  double span_default_logs_period_;
   int baudrate_;
   double poll_rate_;
 

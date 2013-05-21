@@ -6,7 +6,10 @@
 		<param name="port" value="/dev/ttyUSB0" />
 		<param name="baudrate" value=9600 />
 		<param name="odom_topic" value="/gps_odom" />
-		<param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" />
+		<param name="log_commands" value="" />
+		<!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
+		<param name="gps_default_logs_period" value=0.05 />
+		<param name="span_default_logs_period" value=0.0 />
 	</node>
 
 </launch>
