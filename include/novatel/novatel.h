@@ -173,55 +173,55 @@ public:
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
     void set_best_lever_arm_callback(BestLeverArmCallback handler){
-        best_lever_arm_callback_=handler};
+        best_lever_arm_callback_=handler;};
     void set_best_position_callback(BestPositionCallback handler){
-        best_position_callback_=handler};
+        best_position_callback_=handler;};
     void set_best_utm_position_callback(BestUtmPositionCallback handler){
-        best_utm_position_callback_=handler};
-    void set_best_velocity_callback(BestUtmPositionCallback handler){
-        best_velocity_callback_=handler};
+        best_utm_position_callback_=handler;};
+    void set_best_velocity_callback(BestVelocityCallback handler){
+        best_velocity_callback_=handler;};
     void set_best_position_ecef_callback(BestPositionEcefCallback handler){
-        best_position_ecef_callback_=handler};
-    void set_ins_position_velocity_attitude_callback(InsPositionVelocityAttitudeCallback){
-        ins_position_velocity_attitude_callback_=handler};
+        best_position_ecef_callback_=handler;};
+    void set_ins_position_velocity_attitude_callback(InsPositionVelocityAttitudeCallback handler){
+        ins_position_velocity_attitude_callback_=handler;};
     void set_ins_position_velocity_attitude_short_callback(InsPositionVelocityAttitudeShortCallback handler){
-        ins_position_velocity_attitude_short_callback_=handler};
+        ins_position_velocity_attitude_short_callback_=handler;};
     void set_vehicle_body_rotation_callback(VehicleBodyRotationCallback handler){
-        vehicle_body_rotation_callback_=handler};
+        vehicle_body_rotation_callback_=handler;};
     void set_ins_speed_callback(InsSpeedCallback handler){
-        ins_speed_callback_=handler};
+        ins_speed_callback_=handler;};
     void set_raw_imu_callback(RawImuCallback handler){
-        raw_imu_callback_=handler};
+        raw_imu_callback_=handler;};
     void set_raw_imu_short_callback(RawImuShortCallback handler){
-        raw_imu_short_callback_=handler};
+        raw_imu_short_callback_=handler;};
     void set_ins_covariance_callback(InsCovarianceCallback handler){
-        ins_covariance_callback_=handler};
+        ins_covariance_callback_=handler;};
     void set_ins_covariance_short_callback(InsCovarianceShortCallback handler){
-        ins_covariance_short_callback_=handler};
+        ins_covariance_short_callback_=handler;};
     void set_pseudorange_dop_callback(PseudorangeDopCallback handler){
-        pseudorange_dop_callback_=handler};
+        pseudorange_dop_callback_=handler;};
     void set_rtk_dop_callback(RtkDopCallback handler){
-        rtk_dop_callback_=handler};
+        rtk_dop_callback_=handler;};
     void set_baseline_ecef_callback(BaselineEcefCallback handler){
-        baseline_ecef_callback_=handler};
+        baseline_ecef_callback_=handler;};
     void set_ionospheric_model_callback(IonosphericModelCallback handler){
-        ionospheric_model_callback_=handler};
+        ionospheric_model_callback_=handler;};
     void set_range_measurements_callback(RangeMeasurementsCallback handler){
-        range_measurements_callback_=handler};
+        range_measurements_callback_=handler;};
     void set_compressed_range_measurements_callback(CompressedRangeMeasurementsCallback handler){
-        compressed_range_measurements_callback_=handler};
+        compressed_range_measurements_callback_=handler;};
     void set_gps_ephemeris_callback(GpsEphemerisCallback handler){
-        gps_ephemeris_callback_=handler};
+        gps_ephemeris_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
-        satellite_positions_callback_=handler};
+        satellite_positions_callback_=handler;};
     void set_time_offset_callback(TimeOffsetCallback handler){
-        time_offset_callback_=handler};
+        time_offset_callback_=handler;};
     void set_receiver_hardware_status_callback(ReceiverHardwareStatusCallback handler){
-        time_offset_callback_=handler};
+        receiver_hardware_status_callback_=handler;};
     void set_best_pseudorange_position_callback(BestPseudorangePositionCallback handler){
-        best_pseudorange_position_callback_=handler};
+        best_pseudorange_position_callback_=handler;};
     void set_rtk_position_callback(RtkPositionCallback handler){
-        rtk_position_callback_=handler};
+        rtk_position_callback_=handler;};
 
 private:
 
