@@ -1,108 +1,103 @@
-## Project Setup
-cmake_minimum_required(VERSION 2.4.6)
-
-if(COMMAND cmake_policy)
-    cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
-
+cmake_minimum_required(VERSION 2.8.3)
 project(novatel)
 
-## Configurations
+## Find catkin macros and libraries
+## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+## is used, also find other catkin packages
+find_package(catkin)
 
-# Use clang if available
-IF(EXISTS /usr/bin/clang)
-  set(CMAKE_CXX_COMPILER /usr/bin/clang++)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "")
-  set(CMAKE_CXX_FLAGS "-ferror-limit=5")
-  set(CMAKE_BUILD_TYPE Debug)
-ENDIF(EXISTS /usr/bin/clang)
 
-option(NOVATEL_BUILD_TESTS "Build all of the Novatel tests." OFF)
+#######################################
+## Check for ROS ##
+#######################################
+
+option(BUILD_WITH_ROS "Build ROS node and use catkin." ON)
+
+if (NOT catkin_FOUND)
+	SET(BUILD_WITH_ROS OFF)
+endif(NOT catkin_FOUND)
+
+if (BUILD_WITH_ROS)
+	## LIBRARIES: libraries you create in this project that dependent projects also need
+	## CATKIN_DEPENDS: catkin_packages dependent projects also need
+	## DEPENDS: system dependencies of this project that dependent projects also need
+	catkin_package(
+	  INCLUDE_DIRS include
+	  LIBRARIES novatel
+	  CATKIN_DEPENDS serial
+	  DEPENDS Boost
+	)
+else()
+	SET(CATKIN_PACKAGE_LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
+	SET(CATKIN_PACKAGE_BIN_DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+endif (BUILD_WITH_ROS)
+
+# System dependencies are found with CMake's conventions
+find_package(Boost REQUIRED COMPONENTS system filesystem thread)
+
+###########
+## Build ##
+###########
+
+## Specify additional locations of header files
+# include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+
+# Declare a cpp library
+add_library(novatel
+  src/novatel.cpp
+)
+
 option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." OFF)
 
-# Allow for building shared libs override
-IF(NOT BUILD_SHARED_LIBS)
-    set(BUILD_SHARED_LIBS OFF)
-ENDIF(NOT BUILD_SHARED_LIBS)
 
-# Set the default path for built executables to the "bin" directory
-IF(NOT DEFINED(EXECUTABLE_OUTPUT_PATH))
-    set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-ENDIF(NOT DEFINED(EXECUTABLE_OUTPUT_PATH))
-# set the default path for built libraries to the "lib" directory
-IF(NOT DEFINED(LIBRARY_OUTPUT_PATH))
-    set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-ENDIF(NOT DEFINED(LIBRARY_OUTPUT_PATH))
+if (NOVATEL_BUILD_EXAMPLES)
+	# Declare a cpp executable
+	add_executable(novatel_example examples/novatel_example.cpp)
+	target_link_libraries(novatel_example novatel)
+endif (NOVATEL_BUILD_EXAMPLES)
 
-## Configure the build system
-
-# Add the include folder to the include path
-include_directories(${PROJECT_SOURCE_DIR}/include /usr/include/c++/4.6)
-
-# Add default source files
-set(NOVATEL_SRCS src/novatel.cpp)
-# Add default header files
-set(NOVATEL_HEADERS include/novatel/novatel.h 
-					include/novatel/novatel_enums.h
-                    include/novatel/novatel_structures.h)
-
-# Find Boost, if it hasn't already been found
-IF(NOT Boost_FOUND OR NOT Boost_SYSTEM_FOUND OR NOT Boost_FILESYSTEM_FOUND OR NOT Boost_THREAD_FOUND)
-    find_package(Boost COMPONENTS system filesystem thread REQUIRED)
-ENDIF(NOT Boost_FOUND OR NOT Boost_SYSTEM_FOUND OR NOT Boost_FILESYSTEM_FOUND OR NOT Boost_THREAD_FOUND)
-
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-
-set(NOVATEL_LINK_LIBS ${Boost_SYSTEM_LIBRARY}
-                      ${Boost_FILESYSTEM_LIBRARY}
-                      ${Boost_THREAD_LIBRARY})
-
-# Find serial, if it hasn't already been found
-IF(NOT serial_FOUND)
-    find_package(serial REQUIRED)
-ENDIF(NOT serial_FOUND)
-
-if(serial_FOUND)
-  include_directories(${serial_INCLUDE_DIRS})
-  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES} pthread rt)
-else(serial_FOUND)
-  message(FATAL_ERROR "Serial library was not found.")
-endif(serial_FOUND)
+# Build ROS node
+if (BUILD_WITH_ROS)
+	# Declare a cpp executable
+	add_executable(novatel_node src/novatel_node.cpp)
+	target_link_libraries(novatel_node novatel)
+endif (BUILD_WITH_ROS)
 
 
-# Find string_utils, if it hasn't already been found
-IF(NOT string_utils_FOUND)
-    find_package(string_utils REQUIRED)
-ENDIF(NOT string_utils_FOUND)
+#############
+## Install ##
+#############
 
-if(string_utils_FOUND)
-  include_directories(${string_utils_INCLUDE_DIRS})
-  list(APPEND NOVATEL_LINK_LIBS ${string_utils_LIBRARIES})
-else(string_utils_FOUND)
-  message(FATAL_ERROR "String Utils library was not found.")
-endif(string_utils_FOUND)
 
-## Build the noavatel Library
+# Mark executables and/or libraries for installation
+install(TARGETS novatel novatel_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
-# Compile the Library
-add_library(novatel ${NOVATEL_SRCS} ${NOVATEL_HEADERS})
-target_link_libraries(novatel ${NOVATEL_LINK_LIBS})
+# Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".svn" EXCLUDE
+)
 
-## Build Examples
+## Mark other files for installation (e.g. launch and bag files, etc.)
+# install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
-# If asked to
-IF(NOVATEL_BUILD_EXAMPLES)
-    # Compile the novatel Test program
-    add_executable(novatel_example examples/novatel_example.cpp)
-    # Link the Test program to the novatel library
-    target_link_libraries(novatel_example novatel)
-ENDIF(NOVATEL_BUILD_EXAMPLES)
+#############
+## Testing ##
+#############
 
-## Build tests
+option(NOVATEL_BUILD_TESTS "Build all of the Novatel tests." OFF)
 
-# If asked to
-IF(NOVATEL_BUILD_TESTS)
+
+if (NOVATEL_BUILD_TESTS)
     # Find Google Test
     enable_testing()
     find_package(GTest REQUIRED)
@@ -115,45 +110,4 @@ IF(NOVATEL_BUILD_TESTS)
                           novatel)
 
     add_test(AllTestsIntest_novatel novatel_tests)
-ENDIF(NOVATEL_BUILD_TESTS)
-
-## Setup install and uninstall
-
-# Unless asked not to...
-IF(NOT NOVATEL_DONT_CONFIGURE_INSTALL)
-    # Configure make install
-    IF(NOT CMAKE_INSTALL_PREFIX)
-        SET(CMAKE_INSTALL_PREFIX /usr/local)
-    ENDIF(NOT CMAKE_INSTALL_PREFIX)
-    
-    INSTALL(TARGETS novatel
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib
-    )
-    
-    INSTALL(FILES include/novatel/novatel.h include/novatel/novatel_structures.h
-            DESTINATION include/novatel)
-    
-    IF(NOT CMAKE_FIND_INSTALL_PATH)
-        set(CMAKE_FIND_INSTALL_PATH ${CMAKE_ROOT})
-    ENDIF(NOT CMAKE_FIND_INSTALL_PATH)
-    
-    # INSTALL(FILES Findnovatel.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
-    
-    ADD_CUSTOM_TARGET(uninstall @echo uninstall package)
-    
-    IF (UNIX)
-      ADD_CUSTOM_COMMAND(
-        COMMENT "uninstall package"
-        COMMAND xargs ARGS rm < install_manifest.txt
-        
-        TARGET  uninstall
-      )
-    ELSE(UNIX)
-      ADD_CUSTOM_COMMAND(
-        COMMENT "uninstall only implemented in unix"
-        TARGET  uninstall
-      )
-    ENDIF(UNIX)
-ENDIF(NOT NOVATEL_DONT_CONFIGURE_INSTALL)
+endif (NOVATEL_BUILD_TESTS)
