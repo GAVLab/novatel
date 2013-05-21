@@ -38,7 +38,6 @@
 #endif
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
-#include "sensor_msgs/NavSatStatus.h"
 
 #include "novatel/novatel.h"
 using namespace novatel;
@@ -76,10 +75,62 @@ public:
   }
 
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
+    ROS_INFO("Received BestUtm");
+
+    sensor_msgs::NavSatFix sat_fix;
+    sat_fix.header.stamp = ros::Time::now();
+    sat_fix.header.frame_id = "/utm";
+
+    if (pos.position_type == NONE)
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+    else if ((pos.position_type == WAAS) || 
+             (pos.position_type == OMNISTAR) ||   
+             (pos.position_type == OMNISTAR_HP) || 
+             (pos.position_type == OMNISTAR_XP) || 
+             (pos.position_type == CDGPS))
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_SBAS_FIX;
+    else if ((pos.position_type == PSRDIFF) || 
+             (pos.position_type == NARROW_FLOAT) ||   
+             (pos.position_type == WIDE_INT) ||     
+             (pos.position_type == WIDE_INT) ||     
+             (pos.position_type == NARROW_INT) ||     
+             (pos.position_type == RTK_DIRECT_INS) ||     
+             (pos.position_type == INS_PSRDIFF) ||    
+             (pos.position_type == INS_RTKFLOAT) ||   
+             (pos.position_type == INS_RTKFIXED))
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
+     else 
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+
+    if (pos.signals_used_mask & 0x30)
+      sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GLONASS;
+    else
+      sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
+
+    // TODO: convert positon to lat, long, alt to export
+
+    // TODO: add covariance
+
+    sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+
+    nav_sat_fix_publisher_.publish(sat_fix);
+
+
+    cur_odom_ = new nav_msgs::Odometry();
+    cur_odom_->header.stamp = sat_fix.header.stamp;
+    cur_odom_->header.frame_id = "/utm";
+    cur_odom_->pose.pose.position.x = pos.easting;
+    cur_odom_->pose.pose.position.y = pos.northing;
+    cur_odom_->pose.pose.position.z = pos.height;
+    //cur_odom_->pose.covariance[0] = 
+
+
+    odom_publisher_.publish(*cur_odom_);
 
   }
 
   void BestVelocityHandler(Velocity&, double&) {
+    ROS_INFO("Received BestVel");
 
   }
 
@@ -123,6 +174,7 @@ public:
       return;
 
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
+    this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -165,8 +217,11 @@ protected:
   bool getParameters() {
     // Get the serial ports
 
-    nh_.param("odom_topic", odom_topic_, std::string("gps_odom"));
+    nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
     ROS_INFO_STREAM("Odom Topic: " << odom_topic_);
+
+    nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
+    ROS_INFO_STREAM("NavSatFix Topic: " << nav_sat_fix_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));
     ROS_INFO_STREAM("Port: " << port_);
@@ -196,12 +251,15 @@ protected:
 
   Novatel gps_;
   std::string odom_topic_;
+  std::string nav_sat_fix_topic_;
   std::string port_;
   std::string log_commands_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
   int baudrate_;
   double poll_rate_;
+
+  nav_msgs::Odometry *cur_odom_;
 
 };
 
