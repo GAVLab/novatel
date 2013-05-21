@@ -54,10 +54,10 @@ public:
 
 
     // set up logging handlers
-    // em_.setLogInfoCallback(handleInfoMessages);
-    // em_.setLogWarningCallback(handleWarningMessages);
-    // em_.setLogErrorCallback(handleErrorMessages);
-    // em_.setLogDebugCallback(handleDebugMessages);
+    gps_.setLogInfoCallback(handleInfoMessages);
+    gps_.setLogWarningCallback(handleWarningMessages);
+    gps_.setLogErrorCallback(handleErrorMessages);
+    gps_.setLogDebugCallback(handleDebugMessages);
 
   }
 
@@ -88,11 +88,11 @@ public:
     if (!this->getParameters())
       return;
 
-    //this->em_publisher_ = nh_.advertise<auxos_messages::EmDataStamped>(em_topic_,0);
+    this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
-    //em_.connect(port_,baudrate_);
-    //em_.startReading(poll_rate_);
+    gps_.Connect(port_,baudrate_);
+    gps_.ConfigureLogs(log_commands_);
 
     ros::spin();
 
@@ -117,6 +117,9 @@ protected:
     nh_.param("baudrate", baudrate_, 9600);
     ROS_INFO_STREAM("Baudrate: " << baudrate_);
 
+    nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
+    ROS_INFO_STREAM("Log Commands: " << log_commands_);
+
     return true;
   }
 
@@ -130,6 +133,7 @@ protected:
   Novatel gps_;
   std::string odom_topic_;
   std::string port_;
+  std::string log_commands_;
   int baudrate_;
   double poll_rate_;
 

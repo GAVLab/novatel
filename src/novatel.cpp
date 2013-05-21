@@ -85,6 +85,7 @@ Novatel::Novatel() {
     buffer_index_=0;
     read_timestamp_=0;
     parse_timestamp_=0;
+    ack_received_=false;
 }
 
 Novatel::~Novatel() {
@@ -188,6 +189,37 @@ bool Novatel::Ping(int num_attempts) {
 	return false;
 
 }
+
+
+void Novatel::ConfigureLogs(std::string log_string) {
+	// parse log_string on semicolons (;)
+	std::vector<std::string> logs;
+
+	Tokenize(log_string, logs, ";");
+
+	// request each log from the receiver and wait for an ack
+	for (std::vector<std::string>::iterator it = logs.begin() ; it != logs.end(); ++it)
+	{
+		// try each command up to five times
+		int ii=0;
+		while (ii<5) {
+			// send log command to gps (e.g. "LOG BESTUTMB ONTIME 1.0")
+			serial_port_->write("LOG " + *it + "\r\n");
+			// wait for acknowledgement (or 2 seconds)
+			boost::mutex::scoped_lock lock(ack_mutex_);
+			boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
+			if (ack_condition_.timed_wait(lock,timeout)) {
+				log_info_("Ack received for requested log: " + *it);
+				break;
+			} else {
+				log_error_("No acknowledgement received for log: " + *it);
+			}
+		}
+
+	}
+
+}
+
 
 bool Novatel::UpdateVersion()
 {
@@ -408,6 +440,13 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				// final byte of acknowledgement received
 				buffer_index_=0;
 				reading_acknowledgement_=false;
+
+				{
+					boost::lock_guard<boost::mutex> lock(ack_mutex_);
+					ack_received_=true;
+				}
+				ack_condition_.notify_all();
+
 				// ACK received
 				handle_acknowledgement_();
 			}

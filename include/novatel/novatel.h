@@ -49,6 +49,7 @@
 #include <boost/function.hpp>
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+//#include <boost/condition_variable.hpp>
 // Serial Headers
 #include "serial/serial.h"
 
@@ -59,10 +60,7 @@ typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
 
 // Messaging callbacks
-typedef boost::function<void(const std::string&)> DebugMsgCallback;
-typedef boost::function<void(const std::string&)> InfoMsgCallback;
-typedef boost::function<void(const std::string&)> WarningMsgCallback;
-typedef boost::function<void(const std::string&)> ErrorMsgCallback;
+typedef boost::function<void(const std::string&)> LogMsgCallback;
 
 // INS Specific Callbacks
 typedef boost::function<void(InsPositionVelocityAttitude&, double&)> InsPositionVelocityAttitudeCallback;
@@ -146,6 +144,19 @@ public:
          this->time_handler_ = time_handler;
      }
 
+    void setLogDebugCallback(LogMsgCallback debug_callback){log_debug_=debug_callback;};
+    void setLogInfoCallback(LogMsgCallback info_callback){log_info_=info_callback;};
+    void setLogWarningCallback(LogMsgCallback warning_callback){log_warning_=warning_callback;};
+    void setLogErrorCallback(LogMsgCallback error_callback){log_error_=error_callback;};
+
+    /*!
+     * Request the given list of logs from the receiver
+     * 
+     * log_string format: "BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0"
+     */
+    void ConfigureLogs(std::string log_string);
+
+
 	void UnlogAll();
 
     /*!
@@ -187,7 +198,6 @@ private:
 	 */
 	void ReadSerialPort();
 
-
 	void BufferIncomingData(unsigned char *message, unsigned int length);
 
 	/*!
@@ -210,10 +220,10 @@ private:
     // Diagnostic Callbacks
     //////////////////////////////////////////////////////
     HandleAcknowledgementCallback handle_acknowledgement_;
-    DebugMsgCallback log_debug_;
-    InfoMsgCallback log_info_;
-    WarningMsgCallback log_warning_;
-    ErrorMsgCallback log_error_;
+    LogMsgCallback log_debug_;
+    LogMsgCallback log_info_;
+    LogMsgCallback log_warning_;
+    LogMsgCallback log_error_;
 
     GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
 
@@ -263,6 +273,10 @@ private:
 	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
 	double parse_timestamp_;		//!< time stamp when last parse began
+
+    boost::condition_variable ack_condition_;
+    boost::mutex ack_mutex_;
+    bool ack_received_;     //!< true if an acknowledgement has been received from the GPS
 
 	//////////////////////////////////////////////////////
     // Receiver information and capabilities
