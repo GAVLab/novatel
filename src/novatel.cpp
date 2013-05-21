@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <string_utils/string_utils.h>
 using namespace std;
 using namespace novatel;
 
@@ -24,6 +23,24 @@ double DefaultGetTime() {
 	boost::posix_time::ptime present_time(boost::posix_time::microsec_clock::universal_time());
 	boost::posix_time::time_duration duration(present_time.time_of_day());
 	return duration.total_seconds();
+}
+
+// stolen from: http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
+void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
+	// Skip delimiters at beginning.
+	std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+	// Find first "non-delimiter".
+	std::string::size_type pos     = str.find_first_of(delimiters, lastPos);
+
+	while (std::string::npos != pos || std::string::npos != lastPos)
+	{
+		// Found a token, add it to the vector.
+		tokens.push_back(str.substr(lastPos, pos - lastPos));
+		// Skip delimiters.  Note the "not_of"
+		lastPos = str.find_first_not_of(delimiters, pos);
+		// Find next "non-delimiter"
+		pos = str.find_first_of(delimiters, lastPos);
+	}
 }
 
 void DefaultAcknowledgementHandler() {
@@ -190,7 +207,7 @@ bool Novatel::UpdateVersion()
 
 	std::vector<std::string> packets;
 
-	string_utils::Tokenize(gps_response, packets, "\n");
+	Tokenize(gps_response, packets, "\n");
 
 	// loop through all packets in file and check for version messages
 	// stop when the first is found or all packets are read

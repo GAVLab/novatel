@@ -4,7 +4,8 @@ project(novatel)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin)
+## libraries found here are added to catkin_LIBRARIES and linked automatically
+find_package(catkin COMPONENTS serial roslib roscpp rosconsole)
 
 
 #######################################
@@ -24,12 +25,13 @@ if (BUILD_WITH_ROS)
 	catkin_package(
 	  INCLUDE_DIRS include
 	  LIBRARIES novatel
-	  CATKIN_DEPENDS serial
+	  CATKIN_DEPENDS serial roslib roscpp rosconsole
 	  DEPENDS Boost
 	)
 else()
 	SET(CATKIN_PACKAGE_LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 	SET(CATKIN_PACKAGE_BIN_DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+	# TODO: need to find serial library here
 endif (BUILD_WITH_ROS)
 
 # System dependencies are found with CMake's conventions
@@ -40,11 +42,16 @@ find_package(Boost REQUIRED COMPONENTS system filesystem thread)
 ###########
 
 ## Specify additional locations of header files
-# include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 # Declare a cpp library
 add_library(novatel
   src/novatel.cpp
+)
+
+target_link_libraries(novatel
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
 
 option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." OFF)
@@ -53,14 +60,14 @@ option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." OFF)
 if (NOVATEL_BUILD_EXAMPLES)
 	# Declare a cpp executable
 	add_executable(novatel_example examples/novatel_example.cpp)
-	target_link_libraries(novatel_example novatel)
+	target_link_libraries(novatel_example novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif (NOVATEL_BUILD_EXAMPLES)
 
 # Build ROS node
 if (BUILD_WITH_ROS)
 	# Declare a cpp executable
 	add_executable(novatel_node src/novatel_node.cpp)
-	target_link_libraries(novatel_node novatel)
+	target_link_libraries(novatel_node novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif (BUILD_WITH_ROS)
 
 
