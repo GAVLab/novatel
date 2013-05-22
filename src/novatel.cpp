@@ -279,8 +279,6 @@ bool Novatel::ParseVersion(std::string packet) {
 		if (found_version==string::npos)
 			return false;
 
-		log_debug_(packet);
-
 		// parse version information
 		// remove header
 		size_t pos=packet.find(";");
@@ -306,7 +304,7 @@ bool Novatel::ParseVersion(std::string packet) {
 		int token_count=0;
 		for(current_token=tokens.begin(); current_token!=tokens.end();++current_token)
 		{
-			log_debug_(*current_token);
+			//log_debug_(*current_token);
 			token_count++;
 		}
 
