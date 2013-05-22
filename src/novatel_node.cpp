@@ -185,8 +185,8 @@ public:
       // convert rate to string
       std::stringstream default_logs;
       default_logs.precision(2);
-      default_logs << "LOG BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "LOG BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
+      default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -195,8 +195,8 @@ public:
       // convert rate to string
       std::stringstream default_logs;
       default_logs.precision(2);
-      default_logs << "LOG INSPVAB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "LOG INSCOVB ONTIME " << std::fixed << gps_default_logs_period_;
+      default_logs << "INSPVAB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "INSCOVB ONTIME " << std::fixed << gps_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
     }
 

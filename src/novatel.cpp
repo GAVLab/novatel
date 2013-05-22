@@ -48,7 +48,7 @@ void DefaultAcknowledgementHandler() {
 }
 
 inline void DefaultDebugMsgCallback(const std::string &msg) {
-    std::cout << "Novatel Debug: " << msg << std::endl;
+    ;//std::cout << "Novatel Debug: " << msg << std::endl;
 }
 
 inline void DefaultInfoMsgCallback(const std::string &msg) {
