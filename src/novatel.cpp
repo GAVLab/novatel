@@ -22,7 +22,7 @@ using namespace novatel;
 double DefaultGetTime() {
 	boost::posix_time::ptime present_time(boost::posix_time::microsec_clock::universal_time());
 	boost::posix_time::time_duration duration(present_time.time_of_day());
-	return duration.total_seconds();
+	return (double)(duration.total_milliseconds())/1000.0;
 }
 
 // stolen from: http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
@@ -96,7 +96,9 @@ bool Novatel::Connect(std::string port, int baudrate) {
 	try {
 
 		//serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
-		serial::Timeout my_timeout(1000,150,0,150,0);
+		//serial::Timeout my_timeout(1000,50,0,50,0);
+		serial::Timeout my_timeout(50, 200, 0, 200, 0);
+
 		serial_port_ = new serial::Serial(port,baudrate,my_timeout);
 
 		if (!serial_port_->isOpen()){
@@ -395,15 +397,29 @@ void Novatel::ReadSerialPort() {
 	unsigned char buffer[MAX_NOUT_SIZE];
 	size_t len;
 
+
 	// continuously read data from serial port
 	while (reading_status_) {
-		// read data
-		len = serial_port_->read(buffer, MAX_NOUT_SIZE);
+		try {
+			// read data
+			len = serial_port_->read(buffer, MAX_NOUT_SIZE);
+		} catch (std::exception &e) {
+	        std::stringstream output;
+	        output << "Error reading from serial port: " << e.what();
+	        log_error_(output.str());
+	        //return;
+    	}
 		// timestamp the read
-		read_timestamp_ = time_handler_();
+		if (time_handler_) 
+			read_timestamp_ = time_handler_();
+		else 
+			read_timestamp_ = 0;
+
+		std::cout << read_timestamp_ << std::endl;
 		// add data to the buffer to be parsed
 		BufferIncomingData(buffer, len);
 	}
+	
 
 }
 

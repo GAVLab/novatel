@@ -156,6 +156,8 @@ public:
      */
     void ConfigureLogs(std::string log_string);
 
+    void SetBaudRate(int baudrate, std::string com_port="COM1");
+
 
 	void UnlogAll();
 

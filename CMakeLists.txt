@@ -32,6 +32,9 @@ else()
 	SET(CATKIN_PACKAGE_LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 	SET(CATKIN_PACKAGE_BIN_DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
 	# TODO: need to find serial library here
+	find_package(serial REQUIRED)
+	set(catkin_INCLUDE_DIRS ${serial_INCLUDE_DIRS})
+	set(catkin_LIBRARIES ${serial_LIBRARIES})
 endif (BUILD_WITH_ROS)
 
 # System dependencies are found with CMake's conventions
