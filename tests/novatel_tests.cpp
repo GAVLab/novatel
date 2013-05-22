@@ -12,6 +12,25 @@
 #include "novatel/novatel.h"
 using namespace novatel;
 
+
+// stolen from: http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
+void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
+    // Skip delimiters at beginning.
+    std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+    // Find first "non-delimiter".
+    std::string::size_type pos     = str.find_first_of(delimiters, lastPos);
+
+    while (std::string::npos != pos || std::string::npos != lastPos)
+    {
+        // Found a token, add it to the vector.
+        tokens.push_back(str.substr(lastPos, pos - lastPos));
+        // Skip delimiters.  Note the "not_of"
+        lastPos = str.find_first_not_of(delimiters, pos);
+        // Find next "non-delimiter"
+        pos = str.find_first_of(delimiters, lastPos);
+    }
+}
+
 TEST(StructureSizeTest, Headers) {
 	ASSERT_EQ(HEADER_SIZE, sizeof(Oem4BinaryHeader));
 	ASSERT_EQ(SHORT_HEADER_SIZE, sizeof(OEM4ShortBinaryHeader));
@@ -52,7 +71,7 @@ TEST(StructureSizeTest, GPSMessageStructures) {
 TEST(DataParsing, Oem4SpanVersion) {
 	// load data file and pass through parse methods
 	std::ifstream test_datafile;
-	test_datafile.open("/home/hododav/Development/sensors/novatel/tests/"
+	test_datafile.open("./"
 			"test_data/ascii_version_test_data_oem4_span.log");
 
 	if (test_datafile.is_open()) {
@@ -64,7 +83,7 @@ TEST(DataParsing, Oem4SpanVersion) {
 
 		std::vector<std::string> packets;
 
-		string_utils::Tokenize(file_contents, packets, "\n");
+		Tokenize(file_contents, packets, "\n");
 
 		// loop through all packets in file and check for version messages
 		// stop when the first is found or all packets are read
@@ -128,7 +147,7 @@ TEST(DataParsing, Oem4SpanVersion) {
 TEST(DataParsing, Oem5PropakGlonassVersion) {
     // load data file and pass through parse methods
     std::ifstream test_datafile;
-    test_datafile.open("/home/hododav/Development/sensors/novatel/tests/"
+    test_datafile.open("./"
             "test_data/ascii_version_test_data_oem5_propak3_glonass.log");
 
     if (test_datafile.is_open()) {
@@ -140,7 +159,7 @@ TEST(DataParsing, Oem5PropakGlonassVersion) {
 
         std::vector<std::string> packets;
 
-        string_utils::Tokenize(file_contents, packets, "\n");
+        Tokenize(file_contents, packets, "\n");
 
         // loop through all packets in file and check for version messages
         // stop when the first is found or all packets are read
@@ -166,7 +185,7 @@ TEST(DataParsing, Oem5PropakGlonassVersion) {
 TEST(DataParsing, BinaryDataSet1) {
     // load data file and pass through parse methods
     std::ifstream test_datafile;
-    test_datafile.open("/home/hododav/Development/sensors/novatel/tests/"
+    test_datafile.open("./"
             "test_data/OneEach.GPS",ios::in|ios::binary);
 
     if (test_datafile.is_open()) {

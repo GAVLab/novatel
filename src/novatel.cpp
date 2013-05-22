@@ -93,40 +93,48 @@ Novatel::~Novatel() {
 }
 
 bool Novatel::Connect(std::string port, int baudrate) {
-	//serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
-	serial::Timeout my_timeout(1000,50,0,50,0);
-	serial_port_ = new serial::Serial(port,baudrate,my_timeout);
+	try {
 
-	if (!serial_port_->isOpen()){
+		//serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
+		serial::Timeout my_timeout(1000,150,0,150,0);
+		serial_port_ = new serial::Serial(port,baudrate,my_timeout);
+
+		if (!serial_port_->isOpen()){
+	        std::stringstream output;
+	        output << "Serial port: " << port << " failed to open." << std::endl;
+	        log_error_(output.str());
+			delete serial_port_;
+			serial_port_ = NULL;
+			return false;
+		} else {
+	        std::stringstream output;
+	        output << "Serial port: " << port << " opened successfully." << std::endl;
+	        log_info_(output.str());
+		}
+
+
+		// stop any incoming data and flush buffers
+		serial_port_->write("UNLOGALL\r\n");
+		// wait for data to stop cominig in
+		boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+		// clear serial port buffers
+		serial_port_->flush();
+
+		// look for GPS by sending ping and waiting for response
+		if (!Ping()){
+	        std::stringstream output;
+	        output << "Novatel GPS not found on port: " << port << std::endl;
+	        log_error_(output.str());
+			delete serial_port_;
+			serial_port_ = NULL;
+			return false;
+		}
+	} catch (std::exception &e) {
         std::stringstream output;
-        output << "Serial port: " << port << " failed to open." << std::endl;
+        output << "Error connecting to gps on com port " << port << ": " << e.what();
         log_error_(output.str());
-		delete serial_port_;
-		serial_port_ = NULL;
-		return false;
-	} else {
-        std::stringstream output;
-        output << "Serial port: " << port << " opened successfully." << std::endl;
-        log_info_(output.str());
-	}
-
-
-	// stop any incoming data and flush buffers
-	serial_port_->write("UNLOGALL\r\n");
-	// wait for data to stop cominig in
-	boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-	// clear serial port buffers
-	serial_port_->flush();
-
-	// look for GPS by sending ping and waiting for response
-	if (!Ping()){
-        std::stringstream output;
-        output << "Novatel GPS not found on port: " << port << std::endl;
-        log_error_(output.str());
-		delete serial_port_;
-		serial_port_ = NULL;
-		return false;
-	}
+        return false;
+    }
 
 	// start reading
 	StartReading();
@@ -136,9 +144,12 @@ bool Novatel::Connect(std::string port, int baudrate) {
 
 void Novatel::Disconnect() {
 	StopReading();
-	serial_port_->close();
-	delete serial_port_;
-	serial_port_=NULL;
+
+	if ((serial_port_!=NULL) && (serial_port_->isOpen()) ) {
+		serial_port_->close();
+		delete serial_port_;
+		serial_port_=NULL;
+	}
 }
 
 bool Novatel::Ping(int num_attempts) {
@@ -229,25 +240,34 @@ bool Novatel::UpdateVersion()
 	//    1,GPSCARD,"L12RV","DZZ06040010","OEMV2G-2.00-2T","3.000A19","3.000A9",
 	//    "2006/Feb/ 9","17:14:33"*5e8df6e0
 
-	// clear port
-	//serial_port_->flush();
-	// send request for version
-	serial_port_->write("log versiona once\r\n");
-	boost::this_thread::sleep(boost::posix_time::milliseconds(250));
-	// read from the serial port until a new line character is seen
-	std::string gps_response = serial_port_->read(5000);
+	try {
+		// clear port
+		//serial_port_->flush();
+		// send request for version
+		serial_port_->write("log versiona once\r\n");
+		// wait for response from the receiver
+		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+		// read from the serial port until a new line character is seen
+		std::string gps_response = serial_port_->read(5000);
 
-	std::vector<std::string> packets;
+		std::vector<std::string> packets;
 
-	Tokenize(gps_response, packets, "\n");
+		Tokenize(gps_response, packets, "\n");
 
-	// loop through all packets in file and check for version messages
-	// stop when the first is found or all packets are read
-	for (size_t ii=0; ii<packets.size(); ii++) {
-		if (ParseVersion(packets[ii])) {
-			return true;
-		}
-	}
+		// loop through all packets in file and check for version messages
+		// stop when the first is found or all packets are read
+		for (size_t ii=0; ii<packets.size(); ii++) {
+			if (ParseVersion(packets[ii])) {
+				return true;
+			}
+		} 
+	} catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error reading version info from receiver: " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+
 
 	return false;
 
@@ -259,12 +279,15 @@ bool Novatel::ParseVersion(std::string packet) {
 		if (found_version==string::npos)
 			return false;
 
+		log_debug_(packet);
+
 		// parse version information
 		// remove header
 		size_t pos=packet.find(";");
 		if (pos==string::npos) {
             log_error_("Error parsing received version."
                        " End of message was not found");
+            log_debug_(packet);
 			return false;
 		}
 
@@ -282,12 +305,19 @@ bool Novatel::ParseVersion(std::string packet) {
 		// make sure the correct number of tokens were found
 		int token_count=0;
 		for(current_token=tokens.begin(); current_token!=tokens.end();++current_token)
+		{
+			log_debug_(*current_token);
 			token_count++;
+		}
 
 		// should be 9 tokens, if not something is wrong
 		if (token_count!=(8*number_components+1)) {
             log_error_("Error parsing received version. "
                        "Incorrect number of tokens found.");
+            std::stringstream err_out;
+			err_out << "Found: " << token_count << "  Expected: " << (8*number_components+1);
+			log_error_(err_out.str());
+			log_debug_(packet);
 			return false;
 		}
 
@@ -407,7 +437,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 			}
 			else
 			{
-                log_warning_("BufferIncomingData::Received unknown data.");
+                ;//log_debug_("BufferIncomingData::Received unknown data.");
 			}
 		} // end if (bufIndex==0)
 		else if (buffer_index_==1)
@@ -499,127 +529,152 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
         case BESTGPSPOS_LOG_TYPE:
             Position best_gps;
             memcpy(&best_gps, message, sizeof(best_gps));
-            best_gps_position_callback_(best_gps, read_timestamp_);
+            if (best_gps_position_callback_)
+            	best_gps_position_callback_(best_gps, read_timestamp_);
             break;
         case BESTLEVERARM_LOG_TYPE:
             BestLeverArm best_lever;
             memcpy(&best_lever, message, sizeof(best_lever));
-            best_lever_arm_callback_(best_lever, read_timestamp_);
+            if (best_lever_arm_callback_)
+            	best_lever_arm_callback_(best_lever, read_timestamp_);
             break;
         case BESTPOSB_LOG_TYPE:
             Position best_pos;
             memcpy(&best_pos, message, sizeof(best_pos));
-            best_position_callback_(best_pos, read_timestamp_);
+            if (best_position_callback_)
+            	best_position_callback_(best_pos, read_timestamp_);
             break;
         case BESTUTMB_LOG_TYPE:
             UtmPosition best_utm;
             memcpy(&best_utm, message, sizeof(best_utm));
-            best_utm_position_callback_(best_utm, read_timestamp_);
+            if (best_utm_position_callback_)
+           		best_utm_position_callback_(best_utm, read_timestamp_);
             break;
         case BESTVELB_LOG_TYPE:
             Velocity best_vel;
             memcpy(&best_vel, message, sizeof(best_vel));
-            best_velocity_callback_(best_vel, read_timestamp_);
+            if (best_velocity_callback_)
+            	best_velocity_callback_(best_vel, read_timestamp_);
             break;
         case BESTXYZB_LOG_TYPE:
             PositionEcef best_xyz;
             memcpy(&best_xyz, message, sizeof(best_xyz));
-            best_position_ecef_callback_(best_xyz, read_timestamp_);
+            if (best_position_ecef_callback_)
+            	best_position_ecef_callback_(best_xyz, read_timestamp_);
             break;
         case INSPVA_LOG_TYPE:
             InsPositionVelocityAttitude ins_pva;
             memcpy(&ins_pva, message, sizeof(ins_pva));
-            ins_position_velocity_attitude_callback_(ins_pva, read_timestamp_);
+            if (ins_position_velocity_attitude_callback_)
+            	ins_position_velocity_attitude_callback_(ins_pva, read_timestamp_);
             break;
         case VEHICLEBODYROTATION_LOG_TYPE:
             VehicleBodyRotation vehicle_body_rotation;
             memcpy(&vehicle_body_rotation, message, sizeof(vehicle_body_rotation));
-            vehicle_body_rotation_callback_(vehicle_body_rotation, read_timestamp_);
+            if (vehicle_body_rotation_callback_)
+            	vehicle_body_rotation_callback_(vehicle_body_rotation, read_timestamp_);
             break;
         case INSSPD_LOG_TYPE:
             InsSpeed ins_speed;
             memcpy(&ins_speed, message, sizeof(ins_speed));
-            ins_speed_callback_(ins_speed, read_timestamp_);
+            if (ins_speed_callback_)
+            	ins_speed_callback_(ins_speed, read_timestamp_);
             break;
         case RAWIMU_LOG_TYPE:
             RawImu raw_imu;
             memcpy(&raw_imu, message, sizeof(raw_imu));
-            raw_imu_callback_(raw_imu, read_timestamp_);
+            if (raw_imu_callback_)
+            	raw_imu_callback_(raw_imu, read_timestamp_);
             break;
         case RAWIMUS_LOG_TYPE:
             RawImuShort raw_imu_s;
             memcpy(&raw_imu_s, message, sizeof(raw_imu_s));
-            raw_imu_short_callback_(raw_imu_s, read_timestamp_);
+            if (raw_imu_short_callback_)
+            	raw_imu_short_callback_(raw_imu_s, read_timestamp_);
             break;
         case INSCOV_LOG_TYPE:
             InsCovariance ins_cov;
             memcpy(&ins_cov, message, sizeof(ins_cov));
-            ins_covariance_callback_(ins_cov, read_timestamp_);
+            if (ins_covariance_callback_)
+            	ins_covariance_callback_(ins_cov, read_timestamp_);
             break;
         case INSCOVS_LOG_TYPE:
             InsCovarianceShort ins_cov_s;
             memcpy(&ins_cov_s, message, sizeof(ins_cov_s));
-            ins_covariance_short_callback_(ins_cov_s, read_timestamp_);
+            if (ins_covariance_short_callback_)
+            	ins_covariance_short_callback_(ins_cov_s, read_timestamp_);
             break;
         case PSRDOPB_LOG_TYPE:
             Dop psr_dop;
             memcpy(&psr_dop, message, sizeof(psr_dop));
-            pseudorange_dop_callback_(psr_dop, read_timestamp_);
+            if (pseudorange_dop_callback_)
+            	pseudorange_dop_callback_(psr_dop, read_timestamp_);
             break;
         case RTKDOPB_LOG_TYPE:
             Dop rtk_dop;
             memcpy(&rtk_dop, message, sizeof(rtk_dop));
-            rtk_dop_callback_(rtk_dop, read_timestamp_);
+            if (rtk_dop_callback_)
+            	rtk_dop_callback_(rtk_dop, read_timestamp_);
             break;
         case BSLNXYZ_LOG_TYPE:
             BaselineEcef baseline_xyz;
             memcpy(&baseline_xyz, message, sizeof(baseline_xyz));
-            baseline_ecef_callback_(baseline_xyz, read_timestamp_);
+            if (baseline_ecef_callback_)
+            	baseline_ecef_callback_(baseline_xyz, read_timestamp_);
             break;
         case IONUTCB_LOG_TYPE:
             IonosphericModel ion;
             memcpy(&ion, message, sizeof(ion));
-            ionospheric_model_callback_(ion, read_timestamp_);
+            if (ionospheric_model_callback_)
+            	ionospheric_model_callback_(ion, read_timestamp_);
             break;
         case RANGEB_LOG_TYPE:
             RangeMeasurements ranges;
             memcpy(&ranges, message, sizeof(ranges));
-            range_measurements_callback_(ranges, read_timestamp_);
+            if (range_measurements_callback_)
+            	range_measurements_callback_(ranges, read_timestamp_);
             break;
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
             memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-            compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+            if (compressed_range_measurements_callback_)
+            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
             break;
         case GPSEPHEMB_LOG_TYPE:
             GpsEphemeris ephemeris;
             memcpy(&ephemeris, message, sizeof(ephemeris));
-            gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            if (gps_ephemeris_callback_)
+            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
             break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
             memcpy(&sat_pos, message, sizeof(sat_pos));
-            satellite_positions_callback_(sat_pos, read_timestamp_);
+            if (satellite_positions_callback_)
+            	satellite_positions_callback_(sat_pos, read_timestamp_);
             break;
         case TIMEB_LOG_TYPE:
             TimeOffset time_offset;
             memcpy(&time_offset, message, sizeof(time_offset));
-            time_offset_callback_(time_offset, read_timestamp_);
+            if (time_offset_callback_)
+            	time_offset_callback_(time_offset, read_timestamp_);
             break;
         case RXHWLEVELSB_LOG_TYPE:
             ReceiverHardwareStatus hw_levels;
             memcpy(&hw_levels, message, sizeof(hw_levels));
-            receiver_hardware_status_callback_(hw_levels, read_timestamp_);
+            if (receiver_hardware_status_callback_)
+            	receiver_hardware_status_callback_(hw_levels, read_timestamp_);
             break;
         case PSRPOSB_LOG_TYPE:
             Position psr_pos;
             memcpy(&psr_pos, message, sizeof(psr_pos));
-            best_pseudorange_position_callback_(psr_pos, read_timestamp_);
+            if (best_pseudorange_position_callback_)
+            	best_pseudorange_position_callback_(psr_pos, read_timestamp_);
             break;
         case RTKPOSB_LOG_TYPE:
             Position rtk_pos;
             memcpy(&rtk_pos, message, sizeof(rtk_pos));
-            rtk_position_callback_(rtk_pos, read_timestamp_);
+            if (rtk_position_callback_)
+            	rtk_position_callback_(rtk_pos, read_timestamp_);
             break;
         default:
             break;
