@@ -75,7 +75,7 @@ public:
   }
 
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
-    ROS_INFO("Received BestUtm");
+    ROS_DEBUG("Received BestUtm");
 
     sensor_msgs::NavSatFix sat_fix;
     sat_fix.header.stamp = ros::Time::now();
@@ -139,7 +139,7 @@ public:
   }
 
   void BestVelocityHandler(Velocity&, double&) {
-    ROS_INFO("Received BestVel");
+    ROS_DEBUG("Received BestVel");
 
   }
 
@@ -192,6 +192,7 @@ public:
     if (gps_default_logs_period_>0) {
       // request default set of gps logs at given rate
       // convert rate to string
+      ROS_INFO("Requesting default GPS messages: BESTUTMB, BESTVELB");
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
@@ -200,6 +201,7 @@ public:
     }
 
     if (span_default_logs_period_>0) {
+      ROS_INFO("Requesting default SPAN messages: INSPVAB, INSCOVB");
       // request default set of gps logs at given rate
       // convert rate to string
       std::stringstream default_logs;
@@ -244,8 +246,8 @@ protected:
     nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
 
-    nh_.param("span_default_logs_period", gps_default_logs_period_, 0.05);
-    ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
+    nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
+    ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
 
 
     return true;

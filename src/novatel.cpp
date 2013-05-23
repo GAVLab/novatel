@@ -44,7 +44,7 @@ void Tokenize(const std::string& str, std::vector<std::string>& tokens, const st
 }
 
 void DefaultAcknowledgementHandler() {
-    std::cout << "Acknowledgement received." << std::endl;
+    ;//std::cout << "Acknowledgement received." << std::endl;
 }
 
 inline void DefaultDebugMsgCallback(const std::string &msg) {
