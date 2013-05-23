@@ -92,7 +92,53 @@ Novatel::~Novatel() {
     Disconnect();
 }
 
-bool Novatel::Connect(std::string port, int baudrate) {
+bool Novatel::Connect(std::string port, int baudrate, bool search) {
+
+	bool connected = Connect_(port, baudrate);
+
+	if (!connected && search) {
+		// search additional baud rates
+		int bauds_to_search[5]={9600,19200,38400,57600,115200};
+		bool found = false;
+		for (int ii=0; ii<5; ii++){
+			if (Connect(port, bauds_to_search[ii], false)) {
+				found = true;
+				break;
+			}
+		}
+
+		// if the receiver was found on a different baud rate, 
+		// change its setting to the selected baud rate and reconnect
+		if (found) {
+			// change baud rate to selected value
+			std::stringstream cmd;
+			cmd << "COM " << baudrate << "\r\n";
+			try {
+				serial_port_->write(cmd.str());
+			} catch (std::exception &e) {
+				std::stringstream output;
+			    output << "Error changing baud rate: " << e.what();
+			    log_error_(output.str());
+			    return false;
+			}
+			Disconnect();
+			boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+			connected = Connect_(port, baudrate);
+		} 
+	}
+
+	if (connected) {
+		// start reading
+		StartReading();
+		return true;
+	} else {
+		log_error_("Failed to connect.");
+		return false;
+	}
+
+}
+
+bool Novatel::Connect_(std::string port, int baudrate=115200) {
 	try {
 
 		//serial::Timeout my_timeout(50, 200, 0, 200, 0); // 115200 working settings
@@ -113,7 +159,6 @@ bool Novatel::Connect(std::string port, int baudrate) {
 	        log_info_(output.str());
 		}
 
-
 		// stop any incoming data and flush buffers
 		serial_port_->write("UNLOGALL\r\n");
 		// wait for data to stop cominig in
@@ -124,33 +169,39 @@ bool Novatel::Connect(std::string port, int baudrate) {
 		// look for GPS by sending ping and waiting for response
 		if (!Ping()){
 	        std::stringstream output;
-	        output << "Novatel GPS not found on port: " << port << std::endl;
+	        output << "Novatel GPS not found on port: " << port << " at baudrate " << baudrate << std::endl;
 	        log_error_(output.str());
 			delete serial_port_;
 			serial_port_ = NULL;
 			return false;
 		}
 	} catch (std::exception &e) {
-        std::stringstream output;
-        output << "Error connecting to gps on com port " << port << ": " << e.what();
-        log_error_(output.str());
-        return false;
-    }
+	    std::stringstream output;
+	    output << "Error connecting to gps on com port " << port << ": " << e.what();
+	    log_error_(output.str());
+	    return false;
+	}
 
-	// start reading
-	StartReading();
 	return true;
-
 }
 
+
 void Novatel::Disconnect() {
+	log_info_("Novatel disconnecting.");
 	StopReading();
 
-	if ((serial_port_!=NULL) && (serial_port_->isOpen()) ) {
-		serial_port_->write("UNLOGALL\r\n");
-		serial_port_->close();
-		delete serial_port_;
-		serial_port_=NULL;
+	try {
+		if ((serial_port_!=NULL) && (serial_port_->isOpen()) ) {
+			log_info_("Sending UNLOGALL and closing port.");
+			serial_port_->write("UNLOGALL\r\n");
+			serial_port_->close();
+			delete serial_port_;
+			serial_port_=NULL;
+		}
+	} catch (std::exception &e) {
+	    std::stringstream output;
+	    output << "Error during disconnect: " << e.what();
+	    log_error_(output.str());
 	}
 }
 
@@ -216,16 +267,22 @@ void Novatel::ConfigureLogs(std::string log_string) {
 		// try each command up to five times
 		int ii=0;
 		while (ii<5) {
-			// send log command to gps (e.g. "LOG BESTUTMB ONTIME 1.0")
-			serial_port_->write("LOG " + *it + "\r\n");
-			// wait for acknowledgement (or 2 seconds)
-			boost::mutex::scoped_lock lock(ack_mutex_);
-			boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
-			if (ack_condition_.timed_wait(lock,timeout)) {
-				log_info_("Ack received for requested log: " + *it);
-				break;
-			} else {
-				log_error_("No acknowledgement received for log: " + *it);
+			try {
+				// send log command to gps (e.g. "LOG BESTUTMB ONTIME 1.0")
+				serial_port_->write("LOG " + *it + "\r\n");
+				// wait for acknowledgement (or 2 seconds)
+				boost::mutex::scoped_lock lock(ack_mutex_);
+				boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
+				if (ack_condition_.timed_wait(lock,timeout)) {
+					log_info_("Ack received for requested log: " + *it);
+					break;
+				} else {
+					log_error_("No acknowledgement received for log: " + *it);
+				}
+			} catch (std::exception &e) {
+				std::stringstream output;
+		        output << "Error configuring receiver logs: " << e.what();
+		        log_error_(output.str());
 			}
 		}
 
@@ -388,6 +445,8 @@ bool Novatel::ParseVersion(std::string packet) {
 }
 
 void Novatel::StartReading() {
+	if (reading_status_)
+		return;
 	// create thread to read from sensor
 	reading_status_=true;
 	read_thread_ptr_ = boost::shared_ptr<boost::thread >

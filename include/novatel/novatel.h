@@ -108,7 +108,7 @@ public:
 	 * @throws ConnectionFailedException connection attempt failed.
 	 * @throws UnknownErrorCodeException unknown error code returned.
 	 */
-	bool Connect(std::string port, int baudrate=115200);
+	 bool Connect(std::string port, int baudrate=115200, bool search=true);
 
    /*!
     * Disconnects from the serial port
@@ -226,6 +226,9 @@ public:
         rtk_position_callback_=handler;};
 
 private:
+
+  bool Connect_(std::string port, int baudrate);
+
 
 	/*!
 	 * Starts a thread to continuously read from the serial port.
