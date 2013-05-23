@@ -101,7 +101,10 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 		int bauds_to_search[5]={9600,19200,38400,57600,115200};
 		bool found = false;
 		for (int ii=0; ii<5; ii++){
-			if (Connect(port, bauds_to_search[ii], false)) {
+			std::stringstream search_msg;
+			search_msg << "Searching for receiver with baudrate: " << bauds_to_search[ii];
+			log_info_(search_msg.str());
+			if (Connect_(port, bauds_to_search[ii])) {
 				found = true;
 				break;
 			}
@@ -113,6 +116,9 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 			// change baud rate to selected value
 			std::stringstream cmd;
 			cmd << "COM " << baudrate << "\r\n";
+			std::stringstream baud_msg;
+			baud_msg << "Changing receiver baud rate to " << baudrate;
+			log_info_(baud_msg.str());
 			try {
 				serial_port_->write(cmd.str());
 			} catch (std::exception &e) {
@@ -189,6 +195,8 @@ bool Novatel::Connect_(std::string port, int baudrate=115200) {
 void Novatel::Disconnect() {
 	log_info_("Novatel disconnecting.");
 	StopReading();
+	// sleep longer than the timeout period
+	boost::this_thread::sleep(boost::posix_time::milliseconds(150));
 
 	try {
 		if ((serial_port_!=NULL) && (serial_port_->isOpen()) ) {
@@ -460,7 +468,7 @@ void Novatel::StopReading() {
 void Novatel::ReadSerialPort() {
 	unsigned char buffer[MAX_NOUT_SIZE];
 	size_t len;
-
+	log_info_("Started read thread.");
 
 	// continuously read data from serial port
 	while (reading_status_) {
