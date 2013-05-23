@@ -115,17 +115,26 @@ public:
 
     nav_sat_fix_publisher_.publish(sat_fix);
 
-
-    cur_odom_ = new nav_msgs::Odometry();
-    cur_odom_->header.stamp = sat_fix.header.stamp;
-    cur_odom_->header.frame_id = "/utm";
-    cur_odom_->pose.pose.position.x = pos.easting;
-    cur_odom_->pose.pose.position.y = pos.northing;
-    cur_odom_->pose.pose.position.z = pos.height;
+    nav_msgs::Odometry cur_odom_;
+    cur_odom_.header.stamp = sat_fix.header.stamp;
+    cur_odom_.header.frame_id = "/utm";
+    cur_odom_.pose.pose.position.x = pos.easting;
+    cur_odom_.pose.pose.position.y = pos.northing;
+    cur_odom_.pose.pose.position.z = pos.height;
     //cur_odom_->pose.covariance[0] = 
 
+    // see if there is a recent velocity message
+    if ((cur_velocity_.header.gps_week==pos.header.gps_week) 
+         && (cur_velocity_.header.gps_millisecs==pos.header.gps_millisecs)) 
+    {
+      cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground);
+      cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground);
+      cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
+      // TODO: add covariance
 
-    odom_publisher_.publish(*cur_odom_);
+    }
+
+    odom_publisher_.publish(cur_odom_);
 
   }
 
@@ -259,7 +268,7 @@ protected:
   int baudrate_;
   double poll_rate_;
 
-  nav_msgs::Odometry *cur_odom_;
+  Velocity cur_velocity_;
 
 };
 
