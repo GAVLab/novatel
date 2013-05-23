@@ -95,11 +95,10 @@ Novatel::~Novatel() {
 bool Novatel::Connect(std::string port, int baudrate) {
 	try {
 
-		//serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
-		//serial::Timeout my_timeout(1000,50,0,50,0);
-		serial::Timeout my_timeout(50, 200, 0, 200, 0);
+		//serial::Timeout my_timeout(50, 200, 0, 200, 0); // 115200 working settings
+		//serial_port_ = new serial::Serial(port,baudrate,my_timeout);
 
-		serial_port_ = new serial::Serial(port,baudrate,my_timeout);
+		serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(50));
 
 		if (!serial_port_->isOpen()){
 	        std::stringstream output;
@@ -148,6 +147,7 @@ void Novatel::Disconnect() {
 	StopReading();
 
 	if ((serial_port_!=NULL) && (serial_port_->isOpen()) ) {
+		serial_port_->write("UNLOGALL\r\n");
 		serial_port_->close();
 		delete serial_port_;
 		serial_port_=NULL;
@@ -244,13 +244,18 @@ bool Novatel::UpdateVersion()
 
 	try {
 		// clear port
-		//serial_port_->flush();
+		serial_port_->flush();
+		// read out any data currently in the buffer
+		std::string read_data = serial_port_->read(5000);
+		while (read_data.length())
+			read_data = serial_port_->read(5000);
+
 		// send request for version
 		serial_port_->write("log versiona once\r\n");
 		// wait for response from the receiver
 		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 		// read from the serial port until a new line character is seen
-		std::string gps_response = serial_port_->read(5000);
+		std::string gps_response = serial_port_->read(15000);
 
 		std::vector<std::string> packets;
 
@@ -415,7 +420,7 @@ void Novatel::ReadSerialPort() {
 		else 
 			read_timestamp_ = 0;
 
-		std::cout << read_timestamp_ << std::endl;
+		//std::cout << read_timestamp_ <<  "  bytes: " << len << std::endl;
 		// add data to the buffer to be parsed
 		BufferIncomingData(buffer, len);
 	}
