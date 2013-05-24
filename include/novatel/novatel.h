@@ -55,6 +55,8 @@
 
 namespace novatel{
 
+// used to convert lat and long to UTM coordinates
+#define GRAD_A_RAD(g) ((g)*0.0174532925199433)
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -265,6 +267,9 @@ private:
 	void ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
+
+  bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
+
 
     //////////////////////////////////////////////////////
     // Serial port reading members

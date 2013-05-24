@@ -48,6 +48,11 @@ void handleWarningMessages(const std::string &msg) {ROS_WARN("%s",msg.c_str());}
 void handleErrorMessages(const std::string &msg) {ROS_ERROR("%s",msg.c_str());}
 void handleDebugMessages(const std::string &msg) {ROS_DEBUG("%s",msg.c_str());}
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+static double radians_to_degrees = 180.0 / M_PI;
+static double degrees_to_radians = M_PI / 180.0;
 
 // ROS Node class
 class NovatelNode {
@@ -130,6 +135,9 @@ public:
       cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground);
       cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground);
       cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
+
+      cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(
+          cur_velocity_.track_over_ground*degrees_to_radians);
       // TODO: add covariance
 
     }
@@ -138,12 +146,56 @@ public:
 
   }
 
-  void BestVelocityHandler(Velocity&, double&) {
+  void BestVelocityHandler(Velocity &vel, double &timestamp) {
     ROS_DEBUG("Received BestVel");
+    cur_velocity_ = vel;
 
   }
 
   void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
+    // convert pva position to UTM
+    double northin, easting;
+    int zoneNum;
+    bool north;
+
+    ConvertLLaUTM(ins_pva.latitude, ins_pva.longitude, &northing, &easting, &zoneNum, &north);
+
+    sensor_msgs::NavSatFix sat_fix;
+    sat_fix.header.stamp = ros::Time::now();
+    sat_fix.header.frame_id = "/utm";
+
+    if (pos.position_type == INS_SOLUTION_GOOD)
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+    else 
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+
+    sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
+
+    sat_fix.latitude = ins_pva.latitude;
+    sat_fix.longitude = ins_pva.longitude;
+    sat_fix.altitude = ins_pva.height;
+
+    sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+
+    nav_sat_fix_publisher_.publish(sat_fix);
+
+    nav_msgs::Odometry cur_odom_;
+    cur_odom_.header.stamp = sat_fix.header.stamp;
+    cur_odom_.header.frame_id = "/utm";
+    cur_odom_.pose.pose.position.x = easting;
+    cur_odom_.pose.pose.position.y = northing;
+    cur_odom_.pose.pose.position.z = ins_pva.height;
+    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll,ins_pva.pitch,ins_pva.yaw);
+
+    //cur_odom_->pose.covariance[0] = 
+
+    cur_odom_.twist.twist.linear.x=ins_pva.east_velocity;
+    cur_odom_.twist.twist.linear.y=ins_pva.north_velocity;
+    cur_odom_.twist.twist.linear.z=ins_pva.up_velocity;
+      // TODO: add covariance
+
+    odom_publisher_.publish(cur_odom_);
+
 
   }
 
@@ -158,24 +210,6 @@ public:
   void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
 
   }
-
-  //void HandleEmData(EM61MK2Data &data) {
-    // auxos_messages::EmDataStamped msg;
-    // msg.header.stamp = ros::Time(data.timestamp);
-    // msg.header.frame_id = "/em";
-
-    // msg.em_name=em_name_;
-    // msg.em_data.mode=data.mode;
-    // msg.em_data.channel_1=data.chan1;
-    // msg.em_data.channel_2=data.chan2;
-    // msg.em_data.channel_3=data.chan3;
-    // msg.em_data.channel_4=data.chan4;
-    // msg.em_data.current=data.current;
-    // msg.em_data.voltage=data.voltage;
-
-    // em_publisher_.publish(msg);
-
-  //}
 
   void run() {
 

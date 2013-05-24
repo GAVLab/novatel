@@ -769,3 +769,60 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
 
 }
 
+// this functions matches the conversion done by the Novatel receivers
+bool Novatel::ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north)
+{
+     const double a  = 6378137.0;
+     const double ee = 0.00669437999;
+     const double k0 = 0.9996;
+     const double e2 = ee / (1-ee);
+
+     double LongTemp = (Long+180)-int((Long+180)/360)*360-180; // -180.00 .. 179.9;
+     double LatRad  = GRAD_A_RAD(Lat);
+     double LongRad = GRAD_A_RAD(LongTemp);
+     double LongOriginRad;
+
+     double N, T, C, A, M;
+     
+     //Make sure the longitude is between -180.00 .. 179.9
+     *zone = int((LongTemp + 180)/6.0) + 1;
+     if (Lat >= 56.0 && Lat < 64.0 && LongTemp >= 3.0 && LongTemp < 12.0)
+          *zone = 32;
+
+     // Special zones for Svalbard
+     if (Lat >= 72.0 && Lat < 84.0) {
+          if (LongTemp>=0.0  && LongTemp<9.0)
+               *zone = 31;
+          else if (LongTemp>=9.0 && LongTemp<21.0)
+               *zone = 33;
+          else if (LongTemp>=21.0 && LongTemp<33.0)
+               *zone = 35;
+          else if (LongTemp>=33.0 && LongTemp<42.0)
+               *zone = 37;
+     }
+     LongOriginRad = GRAD_A_RAD((*zone-1)*6 - 180 + 3);
+
+     N = a/sqrt(1-ee*sin(LatRad)*sin(LatRad));
+     T = tan(LatRad)*tan(LatRad);
+     C = e2*cos(LatRad)*cos(LatRad);
+     A = cos(LatRad)*(LongRad-LongOriginRad);
+     M = a*((1 - ee/4 - 3*ee*ee/64 - 5*ee*ee*ee/256)*LatRad
+                - (3*ee/8     + 3*ee*ee/32 + 45*ee*ee*ee/1024)*sin(2*LatRad)
+                + (15*ee*ee/256 + 45*ee*ee*ee/1024)*sin(4*LatRad)
+                - (35*ee*ee*ee/3072)*sin(6*LatRad));
+     
+     *easting = (double)(k0*N*(A+(1-T+C)*A*A*A/6
+                         + (5-18*T+T*T+72*C-58*e2)*A*A*A*A*A/120) + 500000.0);
+     *northing = (double)(k0*(M+N*tan(LatRad)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24
+                     + (61-58*T+T*T+600*C-330*e2)*A*A*A*A*A*A/720)));
+
+     if (Lat < 0) {
+          *northing += 10000000; //10000000 meter offset for southern hemisphere
+          *north = false;
+     } else
+          *north = true;
+
+     return true;
+}
+
+
