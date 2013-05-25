@@ -173,6 +173,9 @@ public:
      */
 	bool UpdateVersion();
 
+    bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
+
+
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
@@ -267,8 +270,6 @@ private:
 	void ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
-
-  bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
 
 
     //////////////////////////////////////////////////////

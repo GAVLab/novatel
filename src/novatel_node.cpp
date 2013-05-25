@@ -28,6 +28,8 @@
 #include <string>
 
 #include <ros/ros.h>
+#include <tf/tf.h>
+ 
 
 #ifdef WIN32
  #ifdef DELETE
@@ -136,7 +138,7 @@ public:
       cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground);
       cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
 
-      cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(
+      cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
           cur_velocity_.track_over_ground*degrees_to_radians);
       // TODO: add covariance
 
@@ -154,17 +156,17 @@ public:
 
   void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
     // convert pva position to UTM
-    double northin, easting;
+    double northing, easting;
     int zoneNum;
     bool north;
 
-    ConvertLLaUTM(ins_pva.latitude, ins_pva.longitude, &northing, &easting, &zoneNum, &north);
+    gps_.ConvertLLaUTM(ins_pva.latitude, ins_pva.longitude, &northing, &easting, &zoneNum, &north);
 
     sensor_msgs::NavSatFix sat_fix;
     sat_fix.header.stamp = ros::Time::now();
     sat_fix.header.frame_id = "/utm";
 
-    if (pos.position_type == INS_SOLUTION_GOOD)
+    if (ins_pva.status == INS_SOLUTION_GOOD)
       sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
     else 
       sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
@@ -185,7 +187,7 @@ public:
     cur_odom_.pose.pose.position.x = easting;
     cur_odom_.pose.pose.position.y = northing;
     cur_odom_.pose.pose.position.z = ins_pva.height;
-    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll,ins_pva.pitch,ins_pva.yaw);
+    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll,ins_pva.pitch,ins_pva.azimuth);
 
     //cur_odom_->pose.covariance[0] = 
 
