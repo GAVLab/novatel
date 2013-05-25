@@ -5,7 +5,7 @@ project(novatel)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 ## libraries found here are added to catkin_LIBRARIES and linked automatically
-find_package(catkin COMPONENTS serial roslib roscpp rosconsole)
+find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
 
 
 #######################################
