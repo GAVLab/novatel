@@ -41,6 +41,8 @@
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
 
+#include <boost/tokenizer.hpp>
+
 #include "novatel/novatel.h"
 using namespace novatel;
 
@@ -60,6 +62,7 @@ static double degrees_to_radians = M_PI / 180.0;
 class NovatelNode {
 public:
   NovatelNode() : nh_("~"){
+
 
 
     // set up logging handlers
@@ -250,6 +253,41 @@ public:
     // configure additional logs
     gps_.ConfigureLogs(log_commands_);
 
+    // configure serial port (for rtk generally)
+    if (configure_port_!="") {
+      // string should contain com_port,baud_rate,rx_mode,tx_mode
+      // parse message body by tokening on ","
+      typedef boost::tokenizer<boost::char_separator<char> >
+        tokenizer;
+      boost::char_separator<char> sep(",");
+      tokenizer tokens(configure_port_, sep);
+      // set up iterator to go through token list
+      tokenizer::iterator current_token=tokens.begin();
+      std::string num_comps_string=*(current_token);
+      int number_components=atoi(num_comps_string.c_str());
+      // make sure the correct number of tokens were found
+      int token_count=0;
+      for(current_token=tokens.begin(); current_token!=tokens.end();++current_token)
+      {
+        token_count++;
+      }
+
+      if (token_count!=4) {
+        ROS_ERROR_STREAM("Incorrect number of tokens in configure port parameter: " << configure_port_);
+      } else {
+        current_token=tokens.begin();
+        std::string com_port = *(current_token++);
+        int baudrate = atoi((current_token++)->c_str());
+        std::string rx_mode = *(current_token++);
+        std::string tx_mode = *(current_token++);
+
+        ROS_INFO_STREAM("Configure com port baud rate and interface mode for " << com_port << ".");
+        gps_.ConfigureInterfaceMode(com_port,rx_mode,tx_mode);
+        gps_.ConfigureBaudRate(com_port,baudrate);
+      }
+
+    }
+
     ros::spin();
 
   } // function
@@ -279,6 +317,9 @@ protected:
     nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
     ROS_INFO_STREAM("Log Commands: " << log_commands_);
 
+    nh_.param("configure_port", configure_port_, std::string(""));
+    ROS_INFO_STREAM("Configure port: " << configure_port_);
+
     nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
 
@@ -301,6 +342,7 @@ protected:
   std::string nav_sat_fix_topic_;
   std::string port_;
   std::string log_commands_;
+  std::string configure_port_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
   int baudrate_;
