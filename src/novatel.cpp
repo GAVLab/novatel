@@ -298,6 +298,53 @@ void Novatel::ConfigureLogs(std::string log_string) {
 
 }
 
+void Novatel::ConfigureInterfaceMode(std::string com_port,  
+  std::string rx_mode, std::string tx_mode) {
+
+	try {
+		// send command to set interface mode on com port
+		// ex: INTERFACEMODE COM2 RX_MODE TX_MODE
+		serial_port_->write("INTERFACEMODE " + com_port + " " + rx_mode + " " + tx_mode + "\r\n");
+		// wait for acknowledgement (or 2 seconds)
+		boost::mutex::scoped_lock lock(ack_mutex_);
+		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
+		if (ack_condition_.timed_wait(lock,timeout)) {
+			log_info_("Ack received.  Interface mode for port " + 
+				com_port + " set to: " + rx_mode + " " + tx_mode);
+		} else {
+			log_error_("No acknowledgement received for interface mode command.");
+		}
+	} catch (std::exception &e) {
+		std::stringstream output;
+        output << "Error configuring interface mode: " << e.what();
+        log_error_(output.str());
+	}
+}
+
+void Novatel::ConfigureBaudRate(std::string com_port, int baudrate) {
+	try {
+		// send command to set baud rate on GPS com port
+		// ex: COM com1 9600 n 8 1 n off on
+		std::stringstream cmd;
+		cmd << "COM " << com_port << " " << baudrate << " n 8 1 n off on\r\n";
+		serial_port_->write(cmd.str());
+		// wait for acknowledgement (or 2 seconds)
+		boost::mutex::scoped_lock lock(ack_mutex_);
+		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
+		if (ack_condition_.timed_wait(lock,timeout)) {
+			std::stringstream log_out;
+			log_out << "Ack received.  Baud rate on com port " <<
+				com_port << " set to " << baudrate << std::endl;
+			log_info_(log_out.str());
+		} else {
+			log_error_("No acknowledgement received for com configure command.");
+		}
+	} catch (std::exception &e) {
+		std::stringstream output;
+        output << "Error configuring baud rate: " << e.what();
+        log_error_(output.str());
+	}
+}
 
 bool Novatel::UpdateVersion()
 {

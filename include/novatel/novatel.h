@@ -158,6 +158,11 @@ public:
      */
     void ConfigureLogs(std::string log_string);
 
+    void ConfigureInterfaceMode(std::string com_port,  
+      std::string rx_mode, std::string tx_mode);
+
+    void ConfigureBaudRate(std::string com_port, int baudrate);
+
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
 
