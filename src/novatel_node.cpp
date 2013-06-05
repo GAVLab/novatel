@@ -24,6 +24,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <cfloat>
 #include <algorithm>
 #include <string>
 
@@ -57,13 +58,14 @@ void handleDebugMessages(const std::string &msg) {ROS_DEBUG("%s",msg.c_str());}
 #endif
 static double radians_to_degrees = 180.0 / M_PI;
 static double degrees_to_radians = M_PI / 180.0;
+static double degrees_square_to_radians_square = degrees_to_radians*degrees_to_radians;
+
+static double sigma_v = 0.05; // velocity std dev in m/s
 
 // ROS Node class
 class NovatelNode {
 public:
   NovatelNode() : nh_("~"){
-
-
 
     // set up logging handlers
     gps_.setLogInfoCallback(handleInfoMessages);
@@ -120,6 +122,8 @@ public:
     // TODO: convert positon to lat, long, alt to export
 
     // TODO: add covariance
+    // covariance is east,north,up in row major form
+
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -131,7 +135,16 @@ public:
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
-    //cur_odom_->pose.covariance[0] = 
+    // covariance representation given in REP 103
+    //http://www.ros.org/reps/rep-0103.html#covariance-representation
+    // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
+    // row major
+    cur_odom_.pose.covariance[0] = pos.easting_standard_deviation * pos.easting_standard_deviation;
+    cur_odom_.pose.covariance[7] = pos.northing_standard_deviation * pos.northing_standard_deviation;
+    cur_odom_.pose.covariance[14] = pos.height_standard_deviation * pos.height_standard_deviation;
+    // have no way of knowing roll and pitch with just GPS
+    cur_odom_.pose.covariance[21] = DBL_MAX;
+    cur_odom_.pose.covariance[28] = DBL_MAX;
 
     // see if there is a recent velocity message
     if ((cur_velocity_.header.gps_week==pos.header.gps_week) 
@@ -143,11 +156,25 @@ public:
 
       cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
           cur_velocity_.track_over_ground*degrees_to_radians);
-      // TODO: add covariance
+
+      // if i have a fix, velocity std, dev is constant
+      if (cur_velocity_.position_type>NONE) {
+        // yaw covariance
+        double heading_std_dev=sigma_v/cur_velocity_.horizontal_speed;
+        cur_odom_.pose.covariance[35] = heading_std_dev * heading_std_dev;
+        // x and y velocity covariance
+        cur_odom_.twist.covariance[0] = sigma_v*sigma_v;
+        cur_odom_.twist.covariance[7] = sigma_v*sigma_v;
+      } else {
+        cur_odom_.pose.covariance[35] = DBL_MAX;
+        cur_odom_.twist.covariance[0] = DBL_MAX;
+        cur_odom_.twist.covariance[7] = DBL_MAX;
+      }
 
     }
 
     odom_publisher_.publish(cur_odom_);
+      
 
   }
 
@@ -199,6 +226,42 @@ public:
     cur_odom_.twist.twist.linear.z=ins_pva.up_velocity;
       // TODO: add covariance
 
+    // see if there is a matching ins covariance message
+    if ((cur_ins_cov_.gps_week==ins_pva.gps_week) 
+         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs)) {
+
+      cur_odom_.pose.covariance[0] = cur_ins_cov_.position_covariance[0];
+      cur_odom_.pose.covariance[1] = cur_ins_cov_.position_covariance[1];
+      cur_odom_.pose.covariance[2] = cur_ins_cov_.position_covariance[2];
+      cur_odom_.pose.covariance[6] = cur_ins_cov_.position_covariance[3];
+      cur_odom_.pose.covariance[7] = cur_ins_cov_.position_covariance[4];
+      cur_odom_.pose.covariance[8] = cur_ins_cov_.position_covariance[5];
+      cur_odom_.pose.covariance[12] = cur_ins_cov_.position_covariance[6];
+      cur_odom_.pose.covariance[13] = cur_ins_cov_.position_covariance[7];
+      cur_odom_.pose.covariance[14] = cur_ins_cov_.position_covariance[8];
+
+      cur_odom_.pose.covariance[21] = cur_ins_cov_.attitude_covariance[0]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[22] = cur_ins_cov_.attitude_covariance[1]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[23] = cur_ins_cov_.attitude_covariance[2]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[27] = cur_ins_cov_.attitude_covariance[3]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[28] = cur_ins_cov_.attitude_covariance[4]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[29] = cur_ins_cov_.attitude_covariance[5]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[33] = cur_ins_cov_.attitude_covariance[6]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[34] = cur_ins_cov_.attitude_covariance[7]*degrees_square_to_radians_square;
+      cur_odom_.pose.covariance[35] = cur_ins_cov_.attitude_covariance[8]*degrees_square_to_radians_square;
+
+      cur_odom_.twist.covariance[0] = cur_ins_cov_.velocity_covariance[0];
+      cur_odom_.twist.covariance[1] = cur_ins_cov_.velocity_covariance[1];
+      cur_odom_.twist.covariance[2] = cur_ins_cov_.velocity_covariance[2];
+      cur_odom_.twist.covariance[6] = cur_ins_cov_.velocity_covariance[3];
+      cur_odom_.twist.covariance[7] = cur_ins_cov_.velocity_covariance[4];
+      cur_odom_.twist.covariance[8] = cur_ins_cov_.velocity_covariance[5];
+      cur_odom_.twist.covariance[12] = cur_ins_cov_.velocity_covariance[6];
+      cur_odom_.twist.covariance[13] = cur_ins_cov_.velocity_covariance[7];
+      cur_odom_.twist.covariance[14] = cur_ins_cov_.velocity_covariance[8];
+
+    }
+
     odom_publisher_.publish(cur_odom_);
 
 
@@ -209,7 +272,7 @@ public:
   }
 
   void InsCovHandler(InsCovarianceShort &cov, double &timestamp) {
-
+    cur_ins_cov_ = cov;
   }
 
   void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
@@ -349,6 +412,7 @@ protected:
   double poll_rate_;
 
   Velocity cur_velocity_;
+  InsCovarianceShort cur_ins_cov_;
 
 };
 
