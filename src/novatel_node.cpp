@@ -91,7 +91,7 @@ public:
 
     sensor_msgs::NavSatFix sat_fix;
     sat_fix.header.stamp = ros::Time::now();
-    sat_fix.header.frame_id = "/utm";
+    sat_fix.header.frame_id = "/odom";
 
     if (pos.position_type == NONE)
       sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
@@ -131,7 +131,7 @@ public:
 
     nav_msgs::Odometry cur_odom_;
     cur_odom_.header.stamp = sat_fix.header.stamp;
-    cur_odom_.header.frame_id = "/utm";
+    cur_odom_.header.frame_id = "/odom";
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
@@ -194,7 +194,7 @@ public:
 
     sensor_msgs::NavSatFix sat_fix;
     sat_fix.header.stamp = ros::Time::now();
-    sat_fix.header.frame_id = "/utm";
+    sat_fix.header.frame_id = "/odom";
 
     if (ins_pva.status == INS_SOLUTION_GOOD)
       sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
@@ -213,7 +213,7 @@ public:
 
     nav_msgs::Odometry cur_odom_;
     cur_odom_.header.stamp = sat_fix.header.stamp;
-    cur_odom_.header.frame_id = "/utm";
+    cur_odom_.header.frame_id = "/odom";
     cur_odom_.pose.pose.position.x = easting;
     cur_odom_.pose.pose.position.y = northing;
     cur_odom_.pose.pose.position.z = ins_pva.height;
