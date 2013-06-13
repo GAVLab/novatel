@@ -308,8 +308,8 @@ public:
       // convert rate to string
       std::stringstream default_logs;
       default_logs.precision(2);
-      default_logs << "INSPVAB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "INSCOVB ONTIME " << std::fixed << gps_default_logs_period_;
+      default_logs << "INSPVAB ONTIME " << std::fixed << span_default_logs_period_ << ";";
+      default_logs << "INSCOVB ONTIME " << std::fixed << span_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
     }
 

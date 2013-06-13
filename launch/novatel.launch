@@ -3,7 +3,7 @@
 	<node pkg="novatel" type="novatel_node" name="novatel_node" output="screen" 
 	    required="true">
 
-		<param name="port" value="/dev/tty.KeySerial1" />
+		<param name="port" value="/dev/ttyS0" />
 		<param name="baudrate" value="115200" />
 		<param name="odom_topic" value="/gps_odom" />
 		<param name="log_commands" value="" />
