@@ -30,7 +30,8 @@
 
 #include <ros/ros.h>
 #include <tf/tf.h>
- 
+#include <gps_msgs/Ephemeris.h>
+#include <gps_msgs/DualBandRange.h>
 
 #ifdef WIN32
  #ifdef DELETE
@@ -80,6 +81,8 @@ public:
     gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
 
+    gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
+    gps_.set_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
   }
 
   ~NovatelNode() {
@@ -279,6 +282,24 @@ public:
 
   }
 
+  void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
+    ROS_INFO_STREAM("\n\nReceived Ephemeris\n\n");
+
+    gps_msgs::Ephemeris cur_ephem_;
+    cur_ephem_.header.stamp = ros::Time::now();
+
+    ephemeris_publisher_.publish(cur_ephem_);
+  }
+
+  void RangeHandler(RangeMeasurements &range, double &timestamp) {
+    ROS_DEBUG("Received RangeMeasurements");
+
+    gps_msgs::DualBandRange cur_range_;
+    cur_range_.header.stamp = ros::Time::now();
+    ROS_INFO_STREAM("NUM SATS: " << range.number_of_observations);
+    dual_band_range_publisher_.publish(cur_range_);
+  }
+
   void run() {
 
     if (!this->getParameters())
@@ -286,6 +307,8 @@ public:
 
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
     this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
+    this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
+    this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::DualBandRange>(dual_band_range_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -298,7 +321,7 @@ public:
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
+      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -310,6 +333,21 @@ public:
       default_logs.precision(2);
       default_logs << "INSPVAB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
       default_logs << "INSCOVB ONTIME " << std::fixed << gps_default_logs_period_;
+      gps_.ConfigureLogs(default_logs.str());
+    }
+
+    // configure logging of ephemeris
+    if (ephem_default_logs_period_>0) {
+      std::stringstream default_logs;
+      default_logs.precision(2);
+      default_logs << "RAWEPHEMB ONTIME "  << std::fixed << ephem_default_logs_period_ << ";";
+      gps_.ConfigureLogs(default_logs.str());
+    }
+
+    if (range_default_logs_period_>0) {
+      std::stringstream default_logs;
+      default_logs.precision(2);
+      default_logs << "RANGEB ONTIME " << std::fixed << range_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -348,11 +386,8 @@ public:
         gps_.ConfigureInterfaceMode(com_port,rx_mode,tx_mode);
         gps_.ConfigureBaudRate(com_port,baudrate);
       }
-
     }
-
     ros::spin();
-
   } // function
 
 protected:
@@ -370,6 +405,12 @@ protected:
 
     nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
     ROS_INFO_STREAM("NavSatFix Topic: " << nav_sat_fix_topic_);
+
+    nh_.param("ephemeris_topic", ephemeris_topic_, std::string("/ephemeris"));
+    ROS_INFO_STREAM("Ephemeris Topic: " << ephemeris_topic_);
+
+    nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/range"));
+    ROS_INFO_STREAM("DualBandRange Topic: " << dual_band_range_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));
     ROS_INFO_STREAM("Port: " << port_);
@@ -389,6 +430,11 @@ protected:
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
 
+    nh_.param("ephem_default_logs_period", ephem_default_logs_period_, 60.0);
+    ROS_INFO_STREAM("Default Ephemeris logs period: " << ephem_default_logs_period_);
+
+    nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
+    ROS_INFO_STREAM("Default Range logs period: " << range_default_logs_period_);
 
     return true;
   }
@@ -399,15 +445,21 @@ protected:
   ros::NodeHandle nh_;
   ros::Publisher odom_publisher_;
   ros::Publisher nav_sat_fix_publisher_;
+  ros::Publisher ephemeris_publisher_;
+  ros::Publisher dual_band_range_publisher_;
 
   Novatel gps_;
   std::string odom_topic_;
   std::string nav_sat_fix_topic_;
+  std::string ephemeris_topic_;
+  std::string dual_band_range_topic_;
   std::string port_;
   std::string log_commands_;
   std::string configure_port_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
+  double ephem_default_logs_period_;
+  double range_default_logs_period_;
   int baudrate_;
   double poll_rate_;
 
