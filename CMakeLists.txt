@@ -57,7 +57,7 @@ target_link_libraries(novatel
   ${Boost_LIBRARIES}
 )
 
-option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." ON)
+option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." OFF)
 
 
 if (NOVATEL_BUILD_EXAMPLES)

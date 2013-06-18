@@ -68,7 +68,6 @@ static double sigma_v = 0.05; // velocity std dev in m/s
 class NovatelNode {
 public:
   NovatelNode() : nh_("~"){
-
     // set up logging handlers
     gps_.setLogInfoCallback(handleInfoMessages);
     gps_.setLogWarningCallback(handleWarningMessages);
@@ -83,7 +82,9 @@ public:
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
 
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
-    gps_.set_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
+    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
+    cur_lla_.reserve(3);
+    cur_enu_.reserve(3);
   }
 
   ~NovatelNode() {
@@ -139,6 +140,9 @@ public:
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
+    cur_enu_[0] = pos.easting;
+    cur_enu_[1] = pos.northing;
+    cur_enu_[2] = pos.height;
     // covariance representation given in REP 103
     //http://www.ros.org/reps/rep-0103.html#covariance-representation
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -210,6 +214,12 @@ public:
     sat_fix.latitude = ins_pva.latitude;
     sat_fix.longitude = ins_pva.longitude;
     sat_fix.altitude = ins_pva.height;
+    cur_lla_[0] = ins_pva.latitude;
+    cur_lla_[1] = ins_pva.longitude;
+    cur_lla_[2] = ins_pva.height;
+    cur_enu_[0] = easting;
+    cur_enu_[1] = northing;
+    cur_enu_[2] = ins_pva.height;
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -317,7 +327,7 @@ public:
     ephemeris_publisher_.publish(cur_ephem_);
   }
 
-  void RangeHandler(RangeMeasurements &range, double &timestamp) {
+  void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     ROS_DEBUG("Received RangeMeasurements");
     // each message should have everything, so clear it.
     gps_msgs::DualBandRange cur_range_;
@@ -325,8 +335,7 @@ public:
     // cur_range_.gps_time = timestamp;
 
     for (int n=0; n!=(MAX_CHAN); ++n) {
-      ROS_INFO_STREAM("Range PRN: " << range.range_data[n].satellite_prn);
-      // boost::this_thread::sleep( boost::posix_time::milliseconds(1000) );
+      // ROS_INFO_STREAM("Range PRN: " << range.range_data[n].satellite_prn);
       cur_range_.L1.prn[n] = range.range_data[n].satellite_prn;
       cur_range_.L1.psr[n] = range.range_data[n].pseudorange;
       cur_range_.L1.psr_std[n] = range.range_data[n].pseudorange_standard_deviation;
@@ -335,6 +344,10 @@ public:
       cur_range_.L1.carrier.phase[n] = -range.range_data[n].accumulated_doppler;
       cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].accumulated_doppler_std_deviation;
     }
+    cur_range_.latitude = cur_lla_[0];
+    cur_range_.longitude = cur_lla_[1];
+    cur_range_.altitude = cur_lla_[2];
+
     dual_band_range_publisher_.publish(cur_range_);
   }
 
@@ -375,17 +388,16 @@ public:
     }
 
     // configure logging of ephemeris
-    if (ephem_default_logs_period_>0) {
+    if (ephem_log_) {
       std::stringstream default_logs;
-      default_logs.precision(2);
-      default_logs << "GPSEPHEMB ONTIME "  << std::fixed << ephem_default_logs_period_ << ";";
+      default_logs << "GPSEPHEMB ONNEW";
       gps_.ConfigureLogs(default_logs.str());
     }
 
     if (range_default_logs_period_>0) {
       std::stringstream default_logs;
       default_logs.precision(2);
-      default_logs << "RANGEB ONTIME " << std::fixed << range_default_logs_period_ << ";";
+      default_logs << "RANGECMPB ONTIME " << std::fixed << range_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -468,8 +480,8 @@ protected:
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
 
-    nh_.param("ephem_default_logs_period", ephem_default_logs_period_, 60.0);
-    ROS_INFO_STREAM("Default Ephemeris logs period: " << ephem_default_logs_period_);
+    nh_.param("ephem_log", ephem_log_, false);
+    ROS_INFO_STREAM("Ephemeris logging: " << ephem_log_);
 
     nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default Range logs period: " << range_default_logs_period_);
@@ -496,7 +508,7 @@ protected:
   std::string configure_port_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
-  double ephem_default_logs_period_;
+  bool ephem_log_;
   double range_default_logs_period_;
   int baudrate_;
   double poll_rate_;
@@ -505,6 +517,8 @@ protected:
   InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
   gps_msgs::DualBandRange cur_range_;
+  std::vector<double> cur_lla_;
+  std::vector<double> cur_enu_;
 
 
 };

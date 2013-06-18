@@ -605,6 +605,16 @@ struct IonosphericModel {
 });
 
 
+
+
+
+
+
+
+
+
+
+
 PACK(
 struct ChannelStatus {
 	unsigned tracking_state : 5;
@@ -625,15 +635,51 @@ struct ChannelStatus {
 	unsigned channel_assignment : 1;
 });
 
+// /*!
+//  * Pseudorange Message Structure
+//  * This log contains the pseudorange information for a
+//  * single channel. Used in the RangeMeasurements structure.
+//  */
+// PACK(
+// struct RangeData {
+//     uint16_t satellite_prn;                  //!< SV PRN number
+//     uint16_t glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
+//     double pseudorange;                      //!<  pseudorange [m]
+//     float pseudorange_standard_deviation;    //!< pseudorange standard deviation [m]
+//     double accumulated_doppler;             //!< accumulated doppler [cycles]
+//     float accumulated_doppler_std_deviation; //!< accumulated doppler standard deviation [cycles]
+//     float doppler;                           //!< Doppler frequency [Hz]
+//     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]
+//     float locktime;                          //!< Number of seconds of continuous tracking [sec]
+//     ChannelStatus channel_status;            //!< channel tracking status
+// });
+
+
+// /*!
+//  * RANGE Message Structure
+//  * This log contains the channel measurements for the
+//  * currently tracked satellites. When using this log,
+//  * please keep in mind the constraints noted along with
+//  * the description.
+//  */
+// PACK(
+// struct RangeMeasurements {
+//     Oem4BinaryHeader header;			//!< Message header
+//     int32_t number_of_observations;     //!< Number of ranges observations in the following message
+//     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
+//     uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
+// });
+
+
+
 /*!
  * Pseudorange Message Structure
  * This log contains the pseudorange information for a
  * single channel. Used in the RangeMeasurements structure.
  */
-PACK(
 struct RangeData {
-    uint16_t satellite_prn;                  //!< SV PRN number
-    uint16_t glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
+    unsigned short satellite_prn;                  //!< SV PRN number
+    unsigned short glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
     double pseudorange;                      //!<  pseudorange [m]
     float pseudorange_standard_deviation;    //!< pseudorange standard deviation [m]
     double accumulated_doppler;             //!< accumulated doppler [cycles]
@@ -641,10 +687,8 @@ struct RangeData {
     float doppler;                           //!< Doppler frequency [Hz]
     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]
     float locktime;                          //!< Number of seconds of continuous tracking [sec]
-    ChannelStatus channel_status;            //!< channel tracking status
-});
-
-
+    unsigned long channel_status;
+};
 /*!
  * RANGE Message Structure
  * This log contains the channel measurements for the
@@ -652,13 +696,27 @@ struct RangeData {
  * please keep in mind the constraints noted along with
  * the description.
  */
-PACK(
 struct RangeMeasurements {
-    Oem4BinaryHeader header;			//!< Message header
-    int32_t number_of_observations;     //!< Number of ranges observations in the following message
+    Oem4BinaryHeader header;            //!< Message header
+    long number_of_observations;     //!< Number of ranges observations in the following message
     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
-    uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
-});
+    uint32_t     crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*!
@@ -671,7 +729,7 @@ struct CompressedRangeData {
     ChannelStatus channel_status;                   //!< channel tracking status
     int64_t doppler:28;                             //!< Doppler frequency [Hz]
     int64_t pseudorange:36;                         //!<  pseudorange [m]
-    int32_t accumulated_dopplier:32;                //!< accumulated doppler [cycles]
+    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
     uint64_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
     uint64_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
     uint64_t satellite_prn:8;                       //!< SV PRN number

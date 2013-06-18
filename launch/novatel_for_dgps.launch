@@ -20,8 +20,10 @@
 		<!-- Logs periods are in seconds -->
 		<param name="gps_default_logs_period" value="1" />
 		<param name="span_default_logs_period" value="0.0" />
-		<param name="ephem_default_logs_period" value="1" />
 		<param name="range_default_logs_period" value="1" />
+
+		<!-- true/false to log ephem ONNEW -->
+		<param name="ephem_log" value="true" />
 	</node>
 
 </launch>
