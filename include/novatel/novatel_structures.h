@@ -657,7 +657,7 @@ struct RangeMeasurements {
     Oem4BinaryHeader header;			//!< Message header
     int32_t number_of_observations;     //!< Number of ranges observations in the following message
     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
-    uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
+    // uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
 });
 
 

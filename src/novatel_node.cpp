@@ -44,6 +44,7 @@
 #include "sensor_msgs/NavSatFix.h"
 
 #include <boost/tokenizer.hpp>
+// #include <boost/thread/thread.hpp>
 
 #include "novatel/novatel.h"
 using namespace novatel;
@@ -286,7 +287,7 @@ public:
     // ROS_DEBUG("Received GpsEphemeris");
 
     cur_ephem_.header.stamp = ros::Time::now();
-    cur_ephem_.gps_time = timestamp;
+    // cur_ephem_.gps_time = timestamp;
     
     uint8_t n = ephem.prn-1;
     cur_ephem_.health[n] = ephem.health;
@@ -318,13 +319,14 @@ public:
 
   void RangeHandler(RangeMeasurements &range, double &timestamp) {
     ROS_DEBUG("Received RangeMeasurements");
-
+    // each message should have everything, so clear it.
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
-    cur_range_.gps_time = timestamp;
-    // ROS_INFO_STREAM("NUM SATS: " << range.number_of_observations);
+    // cur_range_.gps_time = timestamp;
 
     for (int n=0; n!=(MAX_CHAN); ++n) {
+      ROS_INFO_STREAM("Range PRN: " << range.range_data[n].satellite_prn);
+      // boost::this_thread::sleep( boost::posix_time::milliseconds(1000) );
       cur_range_.L1.prn[n] = range.range_data[n].satellite_prn;
       cur_range_.L1.psr[n] = range.range_data[n].pseudorange;
       cur_range_.L1.psr_std[n] = range.range_data[n].pseudorange_standard_deviation;
@@ -333,7 +335,6 @@ public:
       cur_range_.L1.carrier.phase[n] = -range.range_data[n].accumulated_doppler;
       cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].accumulated_doppler_std_deviation;
     }
-
     dual_band_range_publisher_.publish(cur_range_);
   }
 
@@ -503,6 +504,7 @@ protected:
   Velocity cur_velocity_;
   InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
+  gps_msgs::DualBandRange cur_range_;
 
 
 };
