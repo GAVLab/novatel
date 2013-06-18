@@ -283,37 +283,37 @@ public:
   }
 
   void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
-    ROS_INFO_STREAM("\n\nReceived Ephemeris: PRN = " << ephem.prn);
+    // ROS_DEBUG("Received GpsEphemeris");
 
-    // cur_ephem_.header.stamp = ros::Time::now();
-    // cur_ephem_.gps_time = timestamp;
+    cur_ephem_.header.stamp = ros::Time::now();
+    cur_ephem_.gps_time = timestamp;
     
-    // uint8_t n = ephem.prn-1;
-    // cur_ephem_.health[n] = ephem.health;
-    // cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
-    // cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
-    // cur_ephem_.eccentricity[n] = ephem.eccentricity;
-    // cur_ephem_.perigee_arg[n] = ephem.omega;
-    // cur_ephem_.cos_latitude[n] = ephem.latitude_cosine;
-    // cur_ephem_.sin_latitude[n] = ephem.latitude_sine;
-    // cur_ephem_.cos_orbit_radius[n] = ephem.orbit_radius_cosine;
-    // cur_ephem_.sin_orbit_radius[n] = ephem.orbit_radius_sine;
-    // cur_ephem_.cos_inclination[n] = ephem.inclination_cosine;
-    // cur_ephem_.sin_inclination[n] = ephem.inclination_sine;
-    // cur_ephem_.inclination_angle[n] = ephem.inclination_angle;
-    // cur_ephem_.right_ascension[n] = ephem.right_ascension;
-    // cur_ephem_.mean_motion_diff[n] = ephem.mean_motion_difference;
-    // cur_ephem_.inclination_rate[n] = ephem.inclination_angle_rate;
-    // cur_ephem_.ascension_rate[n] = ephem.right_ascension_rate;
-    // cur_ephem_.time_of_week[n] = ephem.time_of_week;
-    // cur_ephem_.reference_time[n] = ephem.time_of_ephemeris;
-    // cur_ephem_.clock_correction[n] = ephem.sv_clock_correction;
-    // cur_ephem_.group_delay[n] = ephem.group_delay_difference;
-    // cur_ephem_.clock_aging_1[n] = ephem.clock_aligning_param_0;
-    // cur_ephem_.clock_aging_2[n] = ephem.clock_aligning_param_1;
-    // cur_ephem_.clock_aging_3[n] = ephem.clock_aligning_param_2;
+    uint8_t n = ephem.prn-1;
+    cur_ephem_.health[n] = ephem.health;
+    cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
+    cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
+    cur_ephem_.eccentricity[n] = ephem.eccentricity;
+    cur_ephem_.perigee_arg[n] = ephem.omega;
+    cur_ephem_.cos_latitude[n] = ephem.latitude_cosine;
+    cur_ephem_.sin_latitude[n] = ephem.latitude_sine;
+    cur_ephem_.cos_orbit_radius[n] = ephem.orbit_radius_cosine;
+    cur_ephem_.sin_orbit_radius[n] = ephem.orbit_radius_sine;
+    cur_ephem_.cos_inclination[n] = ephem.inclination_cosine;
+    cur_ephem_.sin_inclination[n] = ephem.inclination_sine;
+    cur_ephem_.inclination_angle[n] = ephem.inclination_angle;
+    cur_ephem_.right_ascension[n] = ephem.right_ascension;
+    cur_ephem_.mean_motion_diff[n] = ephem.mean_motion_difference;
+    cur_ephem_.inclination_rate[n] = ephem.inclination_angle_rate;
+    cur_ephem_.ascension_rate[n] = ephem.right_ascension_rate;
+    cur_ephem_.time_of_week[n] = ephem.time_of_week;
+    cur_ephem_.reference_time[n] = ephem.time_of_ephemeris;
+    cur_ephem_.clock_correction[n] = ephem.sv_clock_correction;
+    cur_ephem_.group_delay[n] = ephem.group_delay_difference;
+    cur_ephem_.clock_aging_1[n] = ephem.clock_aligning_param_0;
+    cur_ephem_.clock_aging_2[n] = ephem.clock_aligning_param_1;
+    cur_ephem_.clock_aging_3[n] = ephem.clock_aligning_param_2;
 
-    // ephemeris_publisher_.publish(cur_ephem_);
+    ephemeris_publisher_.publish(cur_ephem_);
   }
 
   void RangeHandler(RangeMeasurements &range, double &timestamp) {
@@ -322,16 +322,16 @@ public:
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = timestamp;
-    ROS_INFO_STREAM("NUM SATS: " << range.number_of_observations);
+    // ROS_INFO_STREAM("NUM SATS: " << range.number_of_observations);
 
-    for (uint8_t n=0; n<sizeof(range.range_data); ++n) {
-      // cur_range_.L1.prn[n] = range.range_data[n].satellite_prn;
-      // cur_range_.L1.psr[n] = range.range_data[n].pseudorange;
-      // cur_range_.L1.psr_std[n] = range.range_data[n].pseudorange_standard_deviation;
-      // cur_range_.L1.carrier.doppler[n] = range.range_data[n].doppler;
-      // cur_range_.L1.carrier.noise[n] = range.range_data[n].carrier_to_noise;
-      // cur_range_.L1.carrier.phase[n] = -range.range_data[n].accumulated_doppler;
-      // cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].accumulated_doppler_std_deviation;
+    for (int n=0; n!=(MAX_CHAN); ++n) {
+      cur_range_.L1.prn[n] = range.range_data[n].satellite_prn;
+      cur_range_.L1.psr[n] = range.range_data[n].pseudorange;
+      cur_range_.L1.psr_std[n] = range.range_data[n].pseudorange_standard_deviation;
+      cur_range_.L1.carrier.doppler[n] = range.range_data[n].doppler;
+      cur_range_.L1.carrier.noise[n] = range.range_data[n].carrier_to_noise;
+      cur_range_.L1.carrier.phase[n] = -range.range_data[n].accumulated_doppler;
+      cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].accumulated_doppler_std_deviation;
     }
 
     dual_band_range_publisher_.publish(cur_range_);
