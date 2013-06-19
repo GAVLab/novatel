@@ -724,31 +724,34 @@ struct RangeMeasurements {
  * This log contains the pseudorange information for a
  * single channel. Used in the RangeMeasurements structure.
  */
-PACK(
+struct CompressedRangeRecord {
+    int64_t doppler:28;                             //!< Doppler frequency [Hz]
+    uint64_t pseudorange:36;                         //!<  pseudorange [m]
+    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
+    uint16_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
+    uint16_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
+    uint16_t satellite_prn:8;                       //!< SV PRN number
+    uint32_t locktime:21;                           //!< Number of seconds of continuous tracking [sec]
+    uint32_t carrier_to_noise:5;                    //!< Signal/Noise [dB-Hz]
+    uint32_t reserved:22;
+    // uint16_t reservedb:16;
+};
+
 struct CompressedRangeData {
     ChannelStatus channel_status;                   //!< channel tracking status
-    int64_t doppler:28;                             //!< Doppler frequency [Hz]
-    int64_t pseudorange:36;                         //!<  pseudorange [m]
-    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
-    uint64_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
-    uint64_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
-    uint64_t satellite_prn:8;                       //!< SV PRN number
-    uint64_t locktime:21;                           //!< Number of seconds of continuous tracking [sec]
-    uint64_t carrier_to_noise:5;                    //!< Signal/Noise [dB-Hz]
-    uint64_t reserved : 22;
-});
+    CompressedRangeRecord range_record;
+};
 
 /*!
  * RANGECMP Message Structure
  * This log contains the compressed version of the RANGE log.
  */
-PACK(
 struct CompressedRangeMeasurements {
     Oem4BinaryHeader header;                        //!< Message header
-    int32_t number_of_observations;                 //!< Number of ranges observations in the following message
+    uint32_t number_of_observations;                 //!< Number of ranges observations in the following message
     CompressedRangeData range_data[MAX_CHAN];       //!< Range data for each available channel
-    uint8_t 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
-});
+    char 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
+};
 
 //*******************************************************************************
 // SATELLITE INFORMATION GPS STRUCTURES

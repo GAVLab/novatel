@@ -335,14 +335,14 @@ public:
     // cur_range_.gps_time = timestamp;
 
     for (int n=0; n!=(MAX_CHAN); ++n) {
-      // ROS_INFO_STREAM("Range PRN: " << range.range_data[n].satellite_prn);
-      cur_range_.L1.prn[n] = range.range_data[n].satellite_prn;
-      cur_range_.L1.psr[n] = range.range_data[n].pseudorange;
-      cur_range_.L1.psr_std[n] = range.range_data[n].pseudorange_standard_deviation;
-      cur_range_.L1.carrier.doppler[n] = range.range_data[n].doppler;
-      cur_range_.L1.carrier.noise[n] = range.range_data[n].carrier_to_noise;
-      cur_range_.L1.carrier.phase[n] = -range.range_data[n].accumulated_doppler;
-      cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].accumulated_doppler_std_deviation;
+      // ROS_INFO_STREAM("Range PRN: " << range.range_data[n].range_record.satellite_prn);
+      cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
+      cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
+      cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
+      cur_range_.L1.carrier.doppler[n] = range.range_data[n].range_record.doppler;
+      cur_range_.L1.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
+      cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
+      cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
     }
     cur_range_.latitude = cur_lla_[0];
     cur_range_.longitude = cur_lla_[1];
