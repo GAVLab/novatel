@@ -275,7 +275,7 @@ private:
 	/*!
 	 * Parses a packet of data from the GPS.  The
 	 */
-	void ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id);
+	void ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
 

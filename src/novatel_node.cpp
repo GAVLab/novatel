@@ -338,8 +338,8 @@ public:
     cur_range_.header.stamp = ros::Time::now();
     // cur_range_.gps_time = timestamp;
 
-    for (int n=0; n!=(MAX_CHAN); ++n) {
-      // ROS_INFO_STREAM("Range PRN: " << range.range_data[n].range_record.satellite_prn);
+    for (int n=0; n<range.number_of_observations; ++n) {
+      ROS_INFO_STREAM("Range PRN: " << range.range_data[n].range_record.satellite_prn);
       cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
       cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
       cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;

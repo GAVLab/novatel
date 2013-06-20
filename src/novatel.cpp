@@ -640,7 +640,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 		{	// add last byte and parse
 			data_buffer_[buffer_index_++]=message[ii];
 			BINARY_LOG_TYPE message_id=(BINARY_LOG_TYPE)(((data_buffer_[5])<<8)+data_buffer_[4]);
-			ParseBinary(data_buffer_,message_id);
+			ParseBinary(data_buffer_,buffer_index_-1,message_id);
 			// reset counters
 			buffer_index_=0;
 			bytes_remaining_=0;
@@ -653,7 +653,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 	}	// end for
 }
 
-void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
+void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id)
 {
     stringstream output;
     output << "Parsing Log: " << message_id << endl;
@@ -771,12 +771,9 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
             memset(&cmp_ranges, 0, sizeof(cmp_ranges));
-            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
+            memcpy(&cmp_ranges, message, length);
             if (compressed_range_measurements_callback_)
             	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
-            	// ParseRangeCmp(message, read_timestamp_);
-        	if (raw_msg_callback_)
-            	raw_msg_callback_(message);
             break;
         case GPSEPHEMB_LOG_TYPE:
             GpsEphemeris ephemeris;
