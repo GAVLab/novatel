@@ -1,5 +1,6 @@
 #include "novatel/novatel.h"
 #include <iostream>
+#include <valarray>
 #include <fstream>
 #include <sstream>
 using namespace std;
@@ -769,9 +770,11 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             break;
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
+            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
             memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
             if (compressed_range_measurements_callback_)
             	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+            	// ParseRangeCmp(message, read_timestamp_);
         	if (raw_msg_callback_)
             	raw_msg_callback_(message);
             break;
@@ -816,6 +819,14 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
     }
     
 }
+
+
+void Novatel::ParseRangeCmp(unsigned char *message, double timestamp)
+{
+CompressedRangeMeasurements cmp_ranges;
+// long numsats = message[std::slice(sizeof(Oem4BinaryHeader), sizeof(long), 0x01)];
+}
+
 
 // this functions matches the conversion done by the Novatel receivers
 bool Novatel::ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north)

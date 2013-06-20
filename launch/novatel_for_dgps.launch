@@ -7,7 +7,7 @@
 		<param name="baudrate" value="115200" />
 
 		<!-- Commands for ports not connected to the present roscore -->
-		<param name="configure_port" value="COM2,9600,RTCM,NONE" />
+		<!-- <param name="configure_port" value="COM2,9600,RTCM,NONE" /> -->
 
 		<!-- Remapping arguments are not used in this driver -->
 		<param name="odom_topic" value="/gps_odom" />

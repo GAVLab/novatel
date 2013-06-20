@@ -330,8 +330,10 @@ public:
   }
 
   void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    ROS_INFO("Received CompressedRangeMeasurements");
+    ROS_INFO_STREAM("Received CompressedRangeMeasurements\n\tsizeof: " << sizeof(range));
+    // ROS_INFO_STREAM("sizeof msg.pseudorange: " << sizeof(range.range_data[0].range_record.satellite_prn));
     // each message should have everything, so clear it.
+    ROS_INFO_STREAM("NumObs: " << range.number_of_observations);
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     // cur_range_.gps_time = timestamp;
@@ -353,8 +355,14 @@ public:
     dual_band_range_publisher_.publish(cur_range_);
   }
 
-  void RawMsgHandler(unsigned char * msg) {
-    ROS_INFO("RAW RANGE MSG");
+  void RawMsgHandler(unsigned char *msg) {
+    ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
+    CompressedRangeMeasurements a;
+    CompressedRangeData b;
+    CompressedRangeRecord c;
+    ROS_INFO_STREAM("sizeof CompressedRangeMeasurements: " << sizeof(a));
+    ROS_INFO_STREAM("sizeof CompressedRangeData: " << sizeof(b));
+    // ROS_INFO_STREAM("sizeof CompressedRangeRecord.satellite_prn " << sizeof(c.satellite_prn));
   }
 
   void run() {

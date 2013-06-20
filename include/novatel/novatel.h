@@ -279,6 +279,8 @@ private:
 
 	bool ParseVersion(std::string packet);
 
+  void ParseRangeCmp(unsigned char *message, double timestamp);
+
 
     //////////////////////////////////////////////////////
     // Serial port reading members
