@@ -83,6 +83,8 @@ public:
 
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
     gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
+    gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
+
     cur_lla_.reserve(3);
     cur_enu_.reserve(3);
   }
@@ -328,7 +330,7 @@ public:
   }
 
   void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    ROS_DEBUG("Received RangeMeasurements");
+    ROS_INFO("Received CompressedRangeMeasurements");
     // each message should have everything, so clear it.
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
@@ -349,6 +351,10 @@ public:
     cur_range_.altitude = cur_lla_[2];
 
     dual_band_range_publisher_.publish(cur_range_);
+  }
+
+  void RawMsgHandler(unsigned char * msg) {
+    ROS_INFO("RAW RANGE MSG");
   }
 
   void run() {

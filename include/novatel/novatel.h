@@ -63,6 +63,7 @@ typedef boost::function<void()> HandleAcknowledgementCallback;
 
 // Messaging callbacks
 typedef boost::function<void(const std::string&)> LogMsgCallback;
+typedef boost::function<void(unsigned char *)> RawMsgCallback;
 
 // INS Specific Callbacks
 typedef boost::function<void(InsPositionVelocityAttitude&, double&)> InsPositionVelocityAttitudeCallback;
@@ -180,7 +181,6 @@ public:
 
     bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
 
-
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
@@ -234,6 +234,9 @@ public:
         best_pseudorange_position_callback_=handler;};
     void set_rtk_position_callback(RtkPositionCallback handler){
         rtk_position_callback_=handler;};
+
+    void set_raw_msg_callback(RawMsgCallback handler) {
+        raw_msg_callback_=handler;};
 
 private:
 
@@ -301,6 +304,8 @@ private:
     //////////////////////////////////////////////////////
     // New Data Callbacks
     //////////////////////////////////////////////////////
+    RawMsgCallback raw_msg_callback_;
+
     BestGpsPositionCallback best_gps_position_callback_;
     BestLeverArmCallback best_lever_arm_callback_;
     BestPositionCallback best_position_callback_;

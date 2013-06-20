@@ -772,6 +772,8 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
             if (compressed_range_measurements_callback_)
             	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+        	if (raw_msg_callback_)
+            	raw_msg_callback_(message);
             break;
         case GPSEPHEMB_LOG_TYPE:
             GpsEphemeris ephemeris;
@@ -812,8 +814,7 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
         default:
             break;
     }
-
-
+    
 }
 
 // this functions matches the conversion done by the Novatel receivers
