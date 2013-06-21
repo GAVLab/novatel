@@ -75,9 +75,10 @@ public:
 
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
-    gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
-    gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
-    gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
+    //gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
+    //gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
+    gps_.set_ins_position_velocity_attitude_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
+    gps_.set_ins_covariance_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));    gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
 
   }
@@ -184,7 +185,9 @@ public:
 
   }
 
-  void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
+  void InsPvaHandler(InsPositionVelocityAttitude &ins_pva, double &timestamp) {
+    //ROS_INFO("Received inspva.");
+
     // convert pva position to UTM
     double northing, easting;
     int zoneNum;
@@ -271,8 +274,9 @@ public:
 
   }
 
-  void InsCovHandler(InsCovarianceShort &cov, double &timestamp) {
-    cur_ins_cov_ = cov;
+  void InsCovHandler(InsCovariance &cov, double &timestamp) {
+     //ROS_INFO("Received inscov.");
+     cur_ins_cov_ = cov;
   }
 
   void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
@@ -310,7 +314,8 @@ public:
       default_logs.precision(2);
       default_logs << "INSPVAB ONTIME " << std::fixed << span_default_logs_period_ << ";";
       default_logs << "INSCOVB ONTIME " << std::fixed << span_default_logs_period_;
-      gps_.ConfigureLogs(default_logs.str());
+      ROS_INFO_STREAM("default logs: " << default_logs);  
+    gps_.ConfigureLogs(default_logs.str());
     }
 
     // configure additional logs
@@ -412,7 +417,7 @@ protected:
   double poll_rate_;
 
   Velocity cur_velocity_;
-  InsCovarianceShort cur_ins_cov_;
+  InsCovariance cur_ins_cov_;
 
 };
 

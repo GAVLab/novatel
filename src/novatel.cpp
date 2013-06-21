@@ -278,6 +278,9 @@ void Novatel::ConfigureLogs(std::string log_string) {
 			try {
 				// send log command to gps (e.g. "LOG BESTUTMB ONTIME 1.0")
 				serial_port_->write("LOG " + *it + "\r\n");
+				std::stringstream cmd;
+				cmd << "LOG " << *it << "\r\n";
+				log_info_(cmd.str());
 				// wait for acknowledgement (or 2 seconds)
 				boost::mutex::scoped_lock lock(ack_mutex_);
 				boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
@@ -654,9 +657,9 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 
 void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
 {
-    stringstream output;
-    output << "Parsing Log: " << message_id << endl;
-    log_debug_(output.str());
+    //stringstream output;
+    //output << "Parsing Log: " << message_id << endl;
+    //log_debug_(output.str());
 
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
@@ -700,6 +703,12 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             memcpy(&ins_pva, message, sizeof(ins_pva));
             if (ins_position_velocity_attitude_callback_)
             	ins_position_velocity_attitude_callback_(ins_pva, read_timestamp_);
+            break;
+        case INSPVAS_LOG_TYPE:
+            InsPositionVelocityAttitudeShort ins_pva_short;
+            memcpy(&ins_pva, message, sizeof(ins_pva_short));
+            if (ins_position_velocity_attitude_short_callback_)
+            	ins_position_velocity_attitude_short_callback_(ins_pva_short, read_timestamp_);
             break;
         case VEHICLEBODYROTATION_LOG_TYPE:
             VehicleBodyRotation vehicle_body_rotation;
