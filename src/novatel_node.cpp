@@ -320,10 +320,11 @@ public:
   void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
-
+    uint8_t L1_obs(0), L2_obs(0);
     for (int n=0; n<range.number_of_observations; ++n) {
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
+          L1_obs++;
           cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
           cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
           cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
@@ -332,6 +333,7 @@ public:
           cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
           cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
         case 17: // L2 C
+          L2_obs++;
           cur_range_.L2.prn[n] = range.range_data[n].range_record.satellite_prn;
           cur_range_.L2.psr[n] = range.range_data[n].range_record.pseudorange;
           cur_range_.L2.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
@@ -340,6 +342,8 @@ public:
           cur_range_.L2.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
           cur_range_.L2.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
       }
+      cur_range_.L1.obs = L1_obs;
+      cur_range_.L2.obs = L2_obs;
     }
 
     cur_range_.latitude = cur_lla_[0];
