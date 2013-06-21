@@ -460,41 +460,43 @@ protected:
 
   bool getParameters() {
 
+    name_ = ros::this_node::getName();
+
     nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
-    ROS_INFO_STREAM("Odom Topic: " << odom_topic_);
+    ROS_INFO_STREAM(name_ << ": Odom Topic: " << odom_topic_);
 
     nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
-    ROS_INFO_STREAM("NavSatFix Topic: " << nav_sat_fix_topic_);
+    ROS_INFO_STREAM(name_ << ": NavSatFix Topic: " << nav_sat_fix_topic_);
 
     nh_.param("ephemeris_topic", ephemeris_topic_, std::string("/ephemeris"));
-    ROS_INFO_STREAM("Ephemeris Topic: " << ephemeris_topic_);
+    ROS_INFO_STREAM(name_ << ": Ephemeris Topic: " << ephemeris_topic_);
 
     nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/range"));
-    ROS_INFO_STREAM("DualBandRange Topic: " << dual_band_range_topic_);
+    ROS_INFO_STREAM(name_ << ": DualBandRange Topic: " << dual_band_range_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));
-    ROS_INFO_STREAM("Port: " << port_);
+    ROS_INFO_STREAM(name_ << ": Port: " << port_);
 
     nh_.param("baudrate", baudrate_, 9600);
-    ROS_INFO_STREAM("Baudrate: " << baudrate_);
+    ROS_INFO_STREAM(name_ << ": Baudrate: " << baudrate_);
 
     nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
-    ROS_INFO_STREAM("Log Commands: " << log_commands_);
+    ROS_INFO_STREAM(name_ << ": Log Commands: " << log_commands_);
 
     nh_.param("configure_port", configure_port_, std::string(""));
-    ROS_INFO_STREAM("Configure port: " << configure_port_);
+    ROS_INFO_STREAM(name_ << ": Configure port: " << configure_port_);
 
     nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
-    ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
+    ROS_INFO_STREAM(name_ << ": Default GPS logs period: " << gps_default_logs_period_);
 
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
-    ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
+    ROS_INFO_STREAM(name_ << ": Default SPAN logs period: " << span_default_logs_period_);
 
     nh_.param("ephem_log", ephem_log_, false);
-    ROS_INFO_STREAM("Ephemeris logging: " << ephem_log_);
+    ROS_INFO_STREAM(name_ << ": Ephemeris logging enabled: " << ephem_log_);
 
     nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
-    ROS_INFO_STREAM("Default Range logs period: " << range_default_logs_period_);
+    ROS_INFO_STREAM(name_ << ": Default Range logs period: " << range_default_logs_period_);
 
     return true;
   }
@@ -503,6 +505,7 @@ protected:
   // ROSNODE Members
   ////////////////////////////////////////////////////////////////
   ros::NodeHandle nh_;
+  std::string name_;
   ros::Publisher odom_publisher_;
   ros::Publisher nav_sat_fix_publisher_;
   ros::Publisher ephemeris_publisher_;
