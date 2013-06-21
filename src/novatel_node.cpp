@@ -180,18 +180,13 @@ public:
         cur_odom_.twist.covariance[0] = DBL_MAX;
         cur_odom_.twist.covariance[7] = DBL_MAX;
       }
-
     }
-
-    odom_publisher_.publish(cur_odom_);
-      
-
+    odom_publisher_.publish(cur_odom_);   
   }
 
   void BestVelocityHandler(Velocity &vel, double &timestamp) {
     ROS_DEBUG("Received BestVel");
     cur_velocity_ = vel;
-
   }
 
   void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
@@ -244,8 +239,8 @@ public:
 
     // see if there is a matching ins covariance message
     if ((cur_ins_cov_.gps_week==ins_pva.gps_week) 
-         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs)) {
-
+         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs))
+    {
       cur_odom_.pose.covariance[0] = cur_ins_cov_.position_covariance[0];
       cur_odom_.pose.covariance[1] = cur_ins_cov_.position_covariance[1];
       cur_odom_.pose.covariance[2] = cur_ins_cov_.position_covariance[2];
@@ -275,16 +270,11 @@ public:
       cur_odom_.twist.covariance[12] = cur_ins_cov_.velocity_covariance[6];
       cur_odom_.twist.covariance[13] = cur_ins_cov_.velocity_covariance[7];
       cur_odom_.twist.covariance[14] = cur_ins_cov_.velocity_covariance[8];
-
     }
-
     odom_publisher_.publish(cur_odom_);
-
-
   }
 
   void RawImuHandler(RawImuShort &imu, double &timestamp) {
-
   }
 
   void InsCovHandler(InsCovarianceShort &cov, double &timestamp) {
@@ -292,16 +282,14 @@ public:
   }
 
   void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
-
   }
 
   void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
     // ROS_DEBUG("Received GpsEphemeris");
-
     cur_ephem_.header.stamp = ros::Time::now();
     // cur_ephem_.gps_time = timestamp;
-    
     uint8_t n = ephem.prn-1;
+
     cur_ephem_.health[n] = ephem.health;
     cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
     cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
@@ -330,24 +318,30 @@ public:
   }
 
   void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    ROS_INFO_STREAM("Received CompressedRangeMeasurements\n\tsizeof: " << sizeof(range));
-    // ROS_INFO_STREAM("sizeof msg.pseudorange: " << sizeof(range.range_data[0].range_record.satellite_prn));
-    // each message should have everything, so clear it.
-    ROS_INFO_STREAM("NumObs: " << range.number_of_observations);
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
-    // cur_range_.gps_time = timestamp;
 
     for (int n=0; n<range.number_of_observations; ++n) {
-      ROS_INFO_STREAM("Range PRN: " << range.range_data[n].range_record.satellite_prn);
-      cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
-      cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
-      cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
-      cur_range_.L1.carrier.doppler[n] = range.range_data[n].range_record.doppler;
-      cur_range_.L1.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
-      cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
-      cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+      switch (range.range_data[n].channel_status.signal_type) {
+        case 0: // L1 C/A
+          cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L1.carrier.doppler[n] = range.range_data[n].range_record.doppler;
+          cur_range_.L1.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
+          cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+        case 17: // L2 C
+          cur_range_.L2.prn[n] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L2.psr[n] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L2.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L2.carrier.doppler[n] = range.range_data[n].range_record.doppler;
+          cur_range_.L2.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
+          cur_range_.L2.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L2.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+      }
     }
+
     cur_range_.latitude = cur_lla_[0];
     cur_range_.longitude = cur_lla_[1];
     cur_range_.altitude = cur_lla_[2];
