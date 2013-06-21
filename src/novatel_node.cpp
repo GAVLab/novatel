@@ -30,8 +30,6 @@
 
 #include <ros/ros.h>
 #include <tf/tf.h>
-#include <gps_msgs/Ephemeris.h>
-#include <gps_msgs/DualBandRange.h>
 
 #ifdef WIN32
  #ifdef DELETE
@@ -42,6 +40,8 @@
 #endif
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
+#include "gps_msgs/Ephemeris.h"
+#include "gps_msgs/DualBandRange.h"
 
 #include <boost/tokenizer.hpp>
 // #include <boost/thread/thread.hpp>
@@ -82,11 +82,9 @@ public:
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
 
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
-    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
+    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::DualBandRangeHandler, this, _1, _2));
     gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
-
-    cur_lla_.reserve(3);
-    cur_enu_.reserve(3);
+    gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
   }
 
   ~NovatelNode() {
@@ -142,9 +140,9 @@ public:
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
-    cur_enu_[0] = pos.easting;
-    cur_enu_[1] = pos.northing;
-    cur_enu_[2] = pos.height;
+    // cur_enu_[0] = pos.easting;
+    // cur_enu_[1] = pos.northing;
+    // cur_enu_[2] = pos.height;
     // covariance representation given in REP 103
     //http://www.ros.org/reps/rep-0103.html#covariance-representation
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -211,12 +209,6 @@ public:
     sat_fix.latitude = ins_pva.latitude;
     sat_fix.longitude = ins_pva.longitude;
     sat_fix.altitude = ins_pva.height;
-    cur_lla_[0] = ins_pva.latitude;
-    cur_lla_[1] = ins_pva.longitude;
-    cur_lla_[2] = ins_pva.height;
-    cur_enu_[0] = easting;
-    cur_enu_[1] = northing;
-    cur_enu_[2] = ins_pva.height;
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -317,11 +309,12 @@ public:
     ephemeris_publisher_.publish(cur_ephem_);
   }
 
-  void RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
+  void DualBandRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
-    uint8_t L1_obs(0), L2_obs(0);
+    uint8_t L1_obs = 0, L2_obs = 0;
     for (int n=0; n<range.number_of_observations; ++n) {
+      if (range.range_data[n].range_record.satellite_prn == 0) continue;
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
           L1_obs++;
@@ -345,22 +338,27 @@ public:
       cur_range_.L1.obs = L1_obs;
       cur_range_.L2.obs = L2_obs;
     }
-
-    cur_range_.latitude = cur_lla_[0];
-    cur_range_.longitude = cur_lla_[1];
-    cur_range_.altitude = cur_lla_[2];
+    cur_range_.lat = cur_lla_[0];
+    cur_range_.lon = cur_lla_[1];
+    cur_range_.alt = cur_lla_[2];
+    cur_range_.lat_cov = pow(cur_lla_std_[0], 2);
+    cur_range_.lon_cov = pow(cur_lla_std_[1], 2);
+    cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
 
     dual_band_range_publisher_.publish(cur_range_);
   }
 
+  void PsrPosHandler(Position &pos, double timestamp) {
+    cur_lla_[0] = pos.latitude;
+    cur_lla_[1] = pos.longitude;
+    cur_lla_[2] = pos.height;
+    cur_lla_std_[0] = pos.latitude_standard_deviation;
+    cur_lla_std_[1] = pos.longitude_standard_deviation;
+    cur_lla_std_[2] = pos.height_standard_deviation;
+  }
+
   void RawMsgHandler(unsigned char *msg) {
-    ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
-    CompressedRangeMeasurements a;
-    CompressedRangeData b;
-    CompressedRangeRecord c;
-    ROS_INFO_STREAM("sizeof CompressedRangeMeasurements: " << sizeof(a));
-    ROS_INFO_STREAM("sizeof CompressedRangeData: " << sizeof(b));
-    // ROS_INFO_STREAM("sizeof CompressedRangeRecord.satellite_prn " << sizeof(c.satellite_prn));
+    // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
   }
 
   void run() {
@@ -410,6 +408,7 @@ public:
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "RANGECMPB ONTIME " << std::fixed << range_default_logs_period_ << ";";
+      default_logs << "PSRPOS ONTIME " << std::fixed << range_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -460,7 +459,6 @@ protected:
   }
 
   bool getParameters() {
-    // Get the serial ports
 
     nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
     ROS_INFO_STREAM("Odom Topic: " << odom_topic_);
@@ -529,8 +527,9 @@ protected:
   InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
   gps_msgs::DualBandRange cur_range_;
-  std::vector<double> cur_lla_;
-  std::vector<double> cur_enu_;
+  double cur_lla_[3];
+  double cur_lla_std_[3];
+  // std::vector<double> cur_enu_;
 
 
 };
