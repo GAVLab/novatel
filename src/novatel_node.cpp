@@ -280,8 +280,9 @@ public:
     // ROS_DEBUG("Received GpsEphemeris");
     cur_ephem_.header.stamp = ros::Time::now();
     // cur_ephem_.gps_time = timestamp;
+    cur_ephem_.obs = 1;
     uint8_t n = ephem.prn-1;
-
+    cur_ephem_.prn[n] = ephem.prn;
     cur_ephem_.health[n] = ephem.health;
     cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
     cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
