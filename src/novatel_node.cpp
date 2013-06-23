@@ -61,7 +61,6 @@ void handleDebugMessages(const std::string &msg) {ROS_DEBUG("%s",msg.c_str());}
 static double radians_to_degrees = 180.0 / M_PI;
 static double degrees_to_radians = M_PI / 180.0;
 static double degrees_square_to_radians_square = degrees_to_radians*degrees_to_radians;
-
 static double sigma_v = 0.05; // velocity std dev in m/s
 
 // ROS Node class
@@ -73,14 +72,13 @@ public:
     gps_.setLogWarningCallback(handleWarningMessages);
     gps_.setLogErrorCallback(handleErrorMessages);
     gps_.setLogDebugCallback(handleDebugMessages);
-
+    // set up messaging callbacks
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
     gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
     gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
     gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
-
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
     gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::DualBandRangeHandler, this, _1, _2));
     gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
@@ -125,10 +123,8 @@ public:
       sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
 
     // TODO: convert positon to lat, long, alt to export
-
     // TODO: add covariance
     // covariance is east,north,up in row major form
-
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -314,32 +310,37 @@ public:
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = range.header.gps_millisecs*1000;
-    uint8_t L1_obs = 0, L2_obs = 0;
+    uint8_t L1_obs = 0, L2_obs = 0, m = 0; // m is output index (compress to front)
     for (int n=0; n<range.number_of_observations; ++n) {
-      if (range.range_data[n].range_record.satellite_prn == 0) continue;
+      if (not range.range_data[n].range_record.satellite_prn)
+        continue;
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
+          cur_range_.L1.prn[m] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L1.psr[m] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L1.psr_std[m] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L1.carrier.doppler[m] = range.range_data[n].range_record.doppler;
+          cur_range_.L1.carrier.noise[m] = range.range_data[n].range_record.carrier_to_noise;
+          // negative sign is important!
+          cur_range_.L1.carrier.phase[m] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L1.carrier.phase_std[m] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L1_obs++;
-          cur_range_.L1.prn[n] = range.range_data[n].range_record.satellite_prn;
-          cur_range_.L1.psr[n] = range.range_data[n].range_record.pseudorange;
-          cur_range_.L1.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
-          cur_range_.L1.carrier.doppler[n] = range.range_data[n].range_record.doppler;
-          cur_range_.L1.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
-          cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          m++;
           break;
         case 17: // L2 C
+          cur_range_.L2.prn[m] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L2.psr[m] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L2.psr_std[m] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L2.carrier.doppler[m] = range.range_data[n].range_record.doppler;
+          cur_range_.L2.carrier.noise[m] = range.range_data[n].range_record.carrier_to_noise;
+          // negative sign is important!
+          cur_range_.L2.carrier.phase[m] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L2.carrier.phase_std[m] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L2_obs++;
-          cur_range_.L2.prn[n] = range.range_data[n].range_record.satellite_prn;
-          cur_range_.L2.psr[n] = range.range_data[n].range_record.pseudorange;
-          cur_range_.L2.psr_std[n] = range.range_data[n].range_record.pseudorange_standard_deviation;
-          cur_range_.L2.carrier.doppler[n] = range.range_data[n].range_record.doppler;
-          cur_range_.L2.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
-          cur_range_.L2.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L2.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          m++;
           break;
         default:
-          ROS_DEBUG_STREAM(name_ << ": DualBandRangeHandler: Unhandled signal type");
+          ROS_DEBUG_STREAM(name_ << ": DualBandRangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
           break;
       }
       cur_range_.L1.obs = L1_obs;
@@ -369,7 +370,6 @@ public:
   }
 
   void run() {
-
     if (!this->getParameters())
       return;
 
