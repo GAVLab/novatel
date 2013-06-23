@@ -279,7 +279,7 @@ public:
   void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
     // ROS_DEBUG("Received GpsEphemeris");
     cur_ephem_.header.stamp = ros::Time::now();
-    // cur_ephem_.gps_time = timestamp;
+    cur_ephem_.gps_time = ephem.header.gps_millisecs*1000;
     cur_ephem_.obs = 1;
     uint8_t n = ephem.prn-1;
     cur_ephem_.prn[n] = ephem.prn;
@@ -313,6 +313,7 @@ public:
   void DualBandRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::DualBandRange cur_range_;
     cur_range_.header.stamp = ros::Time::now();
+    cur_range_.gps_time = range.header.gps_millisecs*1000;
     uint8_t L1_obs = 0, L2_obs = 0;
     for (int n=0; n<range.number_of_observations; ++n) {
       if (range.range_data[n].range_record.satellite_prn == 0) continue;
@@ -326,6 +327,7 @@ public:
           cur_range_.L1.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
           cur_range_.L1.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
           cur_range_.L1.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          break;
         case 17: // L2 C
           L2_obs++;
           cur_range_.L2.prn[n] = range.range_data[n].range_record.satellite_prn;
@@ -335,6 +337,10 @@ public:
           cur_range_.L2.carrier.noise[n] = range.range_data[n].range_record.carrier_to_noise;
           cur_range_.L2.carrier.phase[n] = -range.range_data[n].range_record.accumulated_doppler;
           cur_range_.L2.carrier.phase_std[n] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          break;
+        default:
+          ROS_DEBUG_STREAM(name_ << ": DualBandRangeHandler: Unhandled signal type");
+          break;
       }
       cur_range_.L1.obs = L1_obs;
       cur_range_.L2.obs = L2_obs;
@@ -409,7 +415,13 @@ public:
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "RANGECMPB ONTIME " << std::fixed << range_default_logs_period_ << ";";
-      default_logs << "PSRPOS ONTIME " << std::fixed << range_default_logs_period_ << ";";
+      gps_.ConfigureLogs(default_logs.str());
+    }
+
+    if (psrpos_default_logs_period_>0) {
+      std::stringstream default_logs;
+      default_logs.precision(2);
+      default_logs << "PSRPOS ONTIME " << std::fixed << psrpos_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -499,6 +511,9 @@ protected:
     nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
     ROS_INFO_STREAM(name_ << ": Default Range logs period: " << range_default_logs_period_);
 
+    nh_.param("psrpos_default_logs_period", psrpos_default_logs_period_, 0.05);
+    ROS_INFO_STREAM(name_ << ": Default Pseudorange Position logs period: " << psrpos_default_logs_period_);
+
     return true;
   }
 
@@ -522,8 +537,9 @@ protected:
   std::string configure_port_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
-  bool ephem_log_;
   double range_default_logs_period_;
+  double psrpos_default_logs_period_;
+  bool ephem_log_;
   int baudrate_;
   double poll_rate_;
 
