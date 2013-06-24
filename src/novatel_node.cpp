@@ -87,6 +87,14 @@ public:
     this->disconnect();
   }
 
+  double psi2theta(double psi) {
+    return M_PI/2-psi;
+  }  
+
+  double theta2psi(double theta) {
+    return M_PI/2-theta;
+  }
+
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
     ROS_DEBUG("Received BestUtm");
 
@@ -156,7 +164,7 @@ public:
       cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
 
       cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
-          cur_velocity_.track_over_ground*degrees_to_radians);
+          psi2theta(cur_velocity_.track_over_ground*degrees_to_radians));
 
       // if i have a fix, velocity std, dev is constant
       if (cur_velocity_.position_type>NONE) {
@@ -222,7 +230,7 @@ public:
     cur_odom_.pose.pose.position.z = ins_pva.height;
     cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll*degrees_to_radians,
           ins_pva.pitch*degrees_to_radians,
-          ins_pva.azimuth*degrees_to_radians);
+          psi2theta(ins_pva.azimuth*degrees_to_radians));
 
     //cur_odom_->pose.covariance[0] = 
 
