@@ -151,8 +151,8 @@ public:
     if ((cur_velocity_.header.gps_week==pos.header.gps_week) 
          && (cur_velocity_.header.gps_millisecs==pos.header.gps_millisecs)) 
     {
-      cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground);
-      cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground);
+      cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground*degrees_to_radians);
+      cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground*degrees_to_radians);
       cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
 
       cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
@@ -220,7 +220,9 @@ public:
     cur_odom_.pose.pose.position.x = easting;
     cur_odom_.pose.pose.position.y = northing;
     cur_odom_.pose.pose.position.z = ins_pva.height;
-    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll,ins_pva.pitch,ins_pva.azimuth);
+    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll*degrees_to_radians,
+          ins_pva.pitch*degrees_to_radians,
+          ins_pva.azimuth*degrees_to_radians);
 
     //cur_odom_->pose.covariance[0] = 
 
