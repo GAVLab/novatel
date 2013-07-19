@@ -117,7 +117,11 @@ public:
     */
     void Disconnect();
 
-    /*!
+  //! Indicates if a connection to the receiver has been established.
+  bool IsConnected() {return is_connected_;}
+
+  /*!
+
      * Pings the GPS to determine if it is properly connected
      *
      * This method sends a ping to the GPS and waits for a response.
@@ -348,6 +352,7 @@ private:
     boost::mutex ack_mutex_;
     bool ack_received_;     //!< true if an acknowledgement has been received from the GPS
 
+  bool is_connected_; //!< indicates if a connection to the receiver has been established
 	//////////////////////////////////////////////////////
     // Receiver information and capabilities
 	//////////////////////////////////////////////////////

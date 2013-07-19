@@ -86,6 +86,7 @@ Novatel::Novatel() {
     read_timestamp_=0;
     parse_timestamp_=0;
     ack_received_=false;
+    is_connected_ = false;
 }
 
 Novatel::~Novatel() {
@@ -136,6 +137,7 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 	if (connected) {
 		// start reading
 		StartReading();
+		is_connected_ = true;
 		return true;
 	} else {
 		log_error_("Failed to connect.");
@@ -179,12 +181,14 @@ bool Novatel::Connect_(std::string port, int baudrate=115200) {
 	        log_error_(output.str());
 			delete serial_port_;
 			serial_port_ = NULL;
+			is_connected_ = false;
 			return false;
 		}
 	} catch (std::exception &e) {
 	    std::stringstream output;
 	    output << "Error connecting to gps on com port " << port << ": " << e.what();
 	    log_error_(output.str());
+	    is_connected_ = false;
 	    return false;
 	}
 
