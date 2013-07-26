@@ -81,7 +81,7 @@ public:
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
     gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::L1L2RangeHandler, this, _1, _2));
-    gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
+    // gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
     gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
   }
 
@@ -349,9 +349,9 @@ public:
     cur_range_.lat = cur_lla_[0];
     cur_range_.lon = cur_lla_[1];
     cur_range_.alt = cur_lla_[2];
-    cur_range_.lat_cov = pow(cur_lla_std_[0], 2);
-    cur_range_.lon_cov = pow(cur_lla_std_[1], 2);
-    cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
+    // cur_range_.lat_cov = pow(cur_lla_std_[0], 2);
+    // cur_range_.lon_cov = pow(cur_lla_std_[1], 2);
+    // cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
 
     dual_band_range_publisher_.publish(cur_range_);
   }
@@ -421,7 +421,7 @@ public:
     if (psrpos_default_logs_period_>0) {
       std::stringstream default_logs;
       default_logs.precision(2);
-      default_logs << "PSRPOS ONTIME " << std::fixed << psrpos_default_logs_period_ << ";";
+      default_logs << "PSRPOSB ONTIME " << std::fixed << psrpos_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
     }
 

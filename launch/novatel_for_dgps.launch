@@ -19,9 +19,8 @@
 
 		<!-- Logs periods are in seconds -->
 		<param name="gps_default_logs_period" value="0.5" />
-		<param name="span_default_logs_period" value="0.0" />
-		<param name="range_default_logs_period" value="1" />
-		<!-- must log psrpos for range to be complete -->
+		<param name="span_default_logs_period" value="0" />
+		<param name="range_default_logs_period" value="0.5" />
 		<param name="psrpos_default_logs_period" value="0.5" />
 
 		<!-- true/false to log ephem ONNEW -->

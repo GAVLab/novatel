@@ -764,7 +764,9 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case PSRPOSB_LOG_TYPE:
             Position psr_pos;
+            memset(&psr_pos, 0, sizeof(psr_pos));
             memcpy(&psr_pos, message, sizeof(psr_pos));
+            // log_info_()
             if (best_pseudorange_position_callback_)
             	best_pseudorange_position_callback_(psr_pos, read_timestamp_);
             break;
@@ -776,17 +778,8 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         default:
             break;
-    }
-    
+    }   
 }
-
-
-void Novatel::ParseRangeCmp(unsigned char *message, double timestamp)
-{
-CompressedRangeMeasurements cmp_ranges;
-// long numsats = message[std::slice(sizeof(Oem4BinaryHeader), sizeof(long), 0x01)];
-}
-
 
 // this functions matches the conversion done by the Novatel receivers
 bool Novatel::ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north)
