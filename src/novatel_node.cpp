@@ -41,7 +41,7 @@
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
 #include "gps_msgs/Ephemeris.h"
-#include "gps_msgs/DualBandRange.h"
+#include "gps_msgs/L1L2Range.h"
 
 #include <boost/tokenizer.hpp>
 // #include <boost/thread/thread.hpp>
@@ -80,7 +80,7 @@ public:
     gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
     gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
-    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::DualBandRangeHandler, this, _1, _2));
+    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::L1L2RangeHandler, this, _1, _2));
     gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
     gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
   }
@@ -306,8 +306,8 @@ public:
     ephemeris_publisher_.publish(cur_ephem_);
   }
 
-  void DualBandRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    gps_msgs::DualBandRange cur_range_;
+  void L1L2RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
+    gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = range.header.gps_millisecs*1000;
     uint8_t L1_obs = 0, L2_obs = 0, m = 0; // m is output index (compress to front)
@@ -340,7 +340,7 @@ public:
           m++;
           break;
         default:
-          ROS_DEBUG_STREAM(name_ << ": DualBandRangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
+          ROS_DEBUG_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
           break;
       }
       cur_range_.L1.obs = L1_obs;
@@ -376,7 +376,7 @@ public:
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
     this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
     this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
-    this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::DualBandRange>(dual_band_range_topic_,0);
+    this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::L1L2Range>(dual_band_range_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -485,7 +485,7 @@ protected:
     ROS_INFO_STREAM(name_ << ": Ephemeris Topic: " << ephemeris_topic_);
 
     nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/range"));
-    ROS_INFO_STREAM(name_ << ": DualBandRange Topic: " << dual_band_range_topic_);
+    ROS_INFO_STREAM(name_ << ": L1L2Range Topic: " << dual_band_range_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));
     ROS_INFO_STREAM(name_ << ": Port: " << port_);
@@ -546,7 +546,7 @@ protected:
   Velocity cur_velocity_;
   InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
-  gps_msgs::DualBandRange cur_range_;
+  gps_msgs::L1L2Range cur_range_;
   double cur_lla_[3];
   double cur_lla_std_[3];
   // std::vector<double> cur_enu_;
