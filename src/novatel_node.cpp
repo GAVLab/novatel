@@ -310,34 +310,35 @@ public:
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = range.header.gps_millisecs*1000;
-    uint8_t L1_obs = 0, L2_obs = 0, m = 0; // m is output index (compress to front)
+    uint8_t L1_obs = 0, L2_obs = 0, m1 = 0, m2=0; // m is output index (compress to front)
     for (int n=0; n<range.number_of_observations; ++n) {
       if (not range.range_data[n].range_record.satellite_prn)
         continue;
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
-          cur_range_.L1.prn[m] = range.range_data[n].range_record.satellite_prn;
-          cur_range_.L1.psr[m] = range.range_data[n].range_record.pseudorange;
-          cur_range_.L1.psr_std[m] = range.range_data[n].range_record.pseudorange_standard_deviation;
-          cur_range_.L1.carrier.doppler[m] = range.range_data[n].range_record.doppler;
-          cur_range_.L1.carrier.noise[m] = range.range_data[n].range_record.carrier_to_noise;
+          // ROS_INFO_STREAM("")
+          cur_range_.L1.prn[m1] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L1.psr[m1] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L1.psr_std[m1] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L1.carrier.doppler[m1] = range.range_data[n].range_record.doppler;
+          cur_range_.L1.carrier.noise[m1] = range.range_data[n].range_record.carrier_to_noise;
           // negative sign is important!
-          cur_range_.L1.carrier.phase[m] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L1.carrier.phase_std[m] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          cur_range_.L1.carrier.phase[m1] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L1.carrier.phase_std[m1] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L1_obs++;
-          m++;
+          m1++;
           break;
-        case 17: // L2 C
-          cur_range_.L2.prn[m] = range.range_data[n].range_record.satellite_prn;
-          cur_range_.L2.psr[m] = range.range_data[n].range_record.pseudorange;
-          cur_range_.L2.psr_std[m] = range.range_data[n].range_record.pseudorange_standard_deviation;
-          cur_range_.L2.carrier.doppler[m] = range.range_data[n].range_record.doppler;
-          cur_range_.L2.carrier.noise[m] = range.range_data[n].range_record.carrier_to_noise;
+        case 9: // L2 C
+          cur_range_.L2.prn[m2] = range.range_data[n].range_record.satellite_prn;
+          cur_range_.L2.psr[m2] = range.range_data[n].range_record.pseudorange;
+          cur_range_.L2.psr_std[m2] = range.range_data[n].range_record.pseudorange_standard_deviation;
+          cur_range_.L2.carrier.doppler[m2] = range.range_data[n].range_record.doppler;
+          cur_range_.L2.carrier.noise[m2] = range.range_data[n].range_record.carrier_to_noise;
           // negative sign is important!
-          cur_range_.L2.carrier.phase[m] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L2.carrier.phase_std[m] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          cur_range_.L2.carrier.phase[m2] = -range.range_data[n].range_record.accumulated_doppler;
+          cur_range_.L2.carrier.phase_std[m2] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L2_obs++;
-          m++;
+          m2++;
           break;
         default:
           ROS_DEBUG_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
