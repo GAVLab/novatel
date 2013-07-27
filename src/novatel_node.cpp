@@ -309,10 +309,15 @@ public:
   void L1L2RangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
-    cur_range_.gps_time = range.header.gps_millisecs*1000;
+    cur_range_.gps_time = range.header.gps_millisecs;
     uint8_t L1_obs = 0, L2_obs = 0, m1 = 0, m2=0; // m is output index (compress to front)
-    for (int n=0; n<range.number_of_observations; ++n) {
-      if (not range.range_data[n].range_record.satellite_prn)
+    // ROS_INFO_STREAM("Num Obs: " << range.number_of_observations);
+    cur_range_.num_obs = range.number_of_observations;
+    for (int n=0; n<2*MAX_CHAN; n++) { //! FIXME how far should this iterate?
+      // make sure something on this index & it is a GPS constellation SV
+      if (not range.range_data[n].range_record.satellite_prn 
+          or range.range_data[n].channel_status.satellite_sys != 0
+          or range.range_data[n].range_record.satellite_prn > 33)
         continue;
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
@@ -322,9 +327,8 @@ public:
           cur_range_.L1.psr_std[m1] = range.range_data[n].range_record.pseudorange_standard_deviation;
           cur_range_.L1.carrier.doppler[m1] = range.range_data[n].range_record.doppler;
           cur_range_.L1.carrier.noise[m1] = range.range_data[n].range_record.carrier_to_noise;
-          // negative sign is important!
           cur_range_.L1.carrier.phase[m1] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L1.carrier.phase_std[m1] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          cur_range_.L1.carrier.phase_std[m1] = range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L1_obs++;
           m1++;
           break;
@@ -336,7 +340,7 @@ public:
           cur_range_.L2.carrier.noise[m2] = range.range_data[n].range_record.carrier_to_noise;
           // negative sign is important!
           cur_range_.L2.carrier.phase[m2] = -range.range_data[n].range_record.accumulated_doppler;
-          cur_range_.L2.carrier.phase_std[m2] = -range.range_data[n].range_record.accumulated_doppler_std_deviation;
+          cur_range_.L2.carrier.phase_std[m2] = range.range_data[n].range_record.accumulated_doppler_std_deviation;
           L2_obs++;
           m2++;
           break;
