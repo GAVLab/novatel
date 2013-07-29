@@ -266,18 +266,18 @@ bool Novatel::Ping(int num_attempts) {
 
 }
 
-bool Novatel::SendCommand(std::stringstream cmd_msg) {
+bool Novatel::SendCommand(std::string cmd_msg) {
 	try {
 		// sends command to GPS receiver
-		serial_port_->write(cmd_msg.str());
+        serial_port_->write(cmd_msg);
 		// wait for acknowledgement (or 2 seconds)
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
 		if (ack_condition_.timed_wait(lock,timeout)) {
-			log_info_("Command " + cmd_msg.str() + "sent to GPS receiver.");
+            log_info_("Command " + cmd_msg + "sent to GPS receiver.");
 			return true;
 		} else {
-			log_error_("Command " + cmd_msg.str() + "failed.");
+            log_error_("Command " + cmd_msg + "failed.");
 			return false;
 		}
 	} catch (std::exception &e) {
@@ -288,11 +288,11 @@ bool Novatel::SendCommand(std::stringstream cmd_msg) {
 	}
 }
 
-bool Novatel::HardwareReset(std::string rst_delay) {
+bool Novatel::HardwareReset(uint8_t rst_delay) {
 	// Resets receiver to cold start, does NOT clear non-volatile memory!
 	std::stringstream rst_cmd;
-	rst_cmd << "RESET " << rst_delay;
-	return SendCommand(rst_cmd);
+    rst_cmd << "RESET " << rst_delay;
+    return SendCommand(rst_cmd.str());
 }
 
 void Novatel::ConfigureLogs(std::string log_string) {
