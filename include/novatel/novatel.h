@@ -169,6 +169,9 @@ public:
 
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
+    bool SendCommand(std::stringstream cmd_msg);
+
+    bool HardwareReset(std::string rst_delay=0);
 
 	void UnlogAll();
 
