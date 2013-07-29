@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(novatel)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-## libraries found here are added to catkin_LIBRARIES and linked automatically
-find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
-
 
 #######################################
 ## Check for ROS ##
@@ -19,6 +13,14 @@ if (NOT catkin_FOUND)
 endif(NOT catkin_FOUND)
 
 if (BUILD_WITH_ROS)
+	## Find catkin macros and libraries
+	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+	## is used, also find other catkin packages
+	## libraries found here are added to catkin_LIBRARIES and linked automatically
+	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
+
+
+
 	## LIBRARIES: libraries you create in this project that dependent projects also need
 	## CATKIN_DEPENDS: catkin_packages dependent projects also need
 	## DEPENDS: system dependencies of this project that dependent projects also need
@@ -31,6 +33,7 @@ if (BUILD_WITH_ROS)
 else()
 	SET(CATKIN_PACKAGE_LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 	SET(CATKIN_PACKAGE_BIN_DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+	SET(CATKIN_PACKAGE_INCLUDE_DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
 	# TODO: need to find serial library here
 	find_package(serial REQUIRED)
 	set(catkin_INCLUDE_DIRS ${serial_INCLUDE_DIRS})
