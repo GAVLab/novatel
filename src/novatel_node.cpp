@@ -619,7 +619,7 @@ protected:
   double poll_rate_;
 
   Velocity cur_velocity_;
-  InsCovarianceShort cur_ins_cov_;
+  // InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
   gps_msgs::L1L2Range cur_range_;
   double cur_lla_[3];
