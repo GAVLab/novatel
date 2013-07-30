@@ -91,6 +91,7 @@ typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
 typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
+typedef boost::function<void(TrackStatus&, double&)> TrackingStatusCallback;
 typedef boost::function<void(ReceiverHardwareStatus&, double&)> ReceiverHardwareStatusCallback;
 typedef boost::function<void(Position&, double&)> BestPositionCallback;
 typedef boost::function<void(Position&, double&)> BestPseudorangePositionCallback;
@@ -246,6 +247,8 @@ public:
         satellite_visibility_callback_=handler;};
     void set_time_offset_callback(TimeOffsetCallback handler){
         time_offset_callback_=handler;};
+    void set_tracking_status_callback(TrackingStatusCallback handler){
+        tracking_status_callback_=handler;};
     void set_receiver_hardware_status_callback(ReceiverHardwareStatusCallback handler){
         receiver_hardware_status_callback_=handler;};
     void set_best_pseudorange_position_callback(BestPseudorangePositionCallback handler){
@@ -346,6 +349,7 @@ private:
     SatellitePositionsCallback satellite_positions_callback_;
     SatelliteVisibilityCallback satellite_visibility_callback_;
     TimeOffsetCallback time_offset_callback_;
+    TrackingStatusCallback tracking_status_callback_;
     ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
     BestPseudorangePositionCallback best_pseudorange_position_callback_;
     RtkPositionCallback rtk_position_callback_;

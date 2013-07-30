@@ -865,6 +865,32 @@ struct TimeOffset {
     uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
 });
 
+/*!
+ * TRACKSTAT Message Structure
+ * This log provides the Tracking Status information for each
+ * receiver channel
+ */
+struct TrackStatusData {
+    uint16_t prn;                       //!< SV prn
+    int16_t glonass_frequency;          //!< GLONASS frequency +7
+    uint32_t channel_tracking_status;   //!< Channel tracking status
+    double pseudorange;                 //!< Pseudorange
+    float doppler_frequency;            //!< Doppler frequency [Hz]
+    float cno_ratio;                    //!< Carrier to noise density ratio [dB-Hz]
+    float lock_time;                    //!< Number of seconds of continuous tracking (no cycle slips)
+    float pseudorange_residual;         //!< Pseudorange residual from pseudorange filter [m]
+    RangeRejectCode range_reject_code;  //!< Range reject code from pseudorange filter
+    float pseudorange_weight;           //!< Pseudorange filter weighting
+};
+struct TrackStatus {
+    Oem4BinaryHeader header;            //!< Message header
+    SolutionStatus solution_status;     //!< Solution status
+    PositionType position_type;         //!< Position type
+    float elevation_cutoff_angle;       //!< Tracking elevation cutoff angle
+    int32_t number_of_channels;         //!< Number of channels with information following
+    TrackStatusData data[MAX_CHAN];     //!< Tracking Status data repeated per channel
+    uint8_t crc[4];
+};
 
 //*******************************************************************************
 // RTK GPS STRUCTURES

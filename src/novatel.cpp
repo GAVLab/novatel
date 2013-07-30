@@ -864,6 +864,12 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             if (time_offset_callback_)
             	time_offset_callback_(time_offset, read_timestamp_);
             break;
+        case TRACKSTATB_LOG_TYPE:
+            TrackStatus tracking_status;
+            memcpy(&tracking_status, message, sizeof(tracking_status));
+            if(tracking_status_callback_)
+                tracking_status_callback_(tracking_status, read_timestamp_);
+            break;
         case RXHWLEVELSB_LOG_TYPE:
             ReceiverHardwareStatus hw_levels;
             memcpy(&hw_levels, message, sizeof(hw_levels));
