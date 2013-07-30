@@ -687,7 +687,8 @@ struct RangeData {
     float doppler;                           //!< Doppler frequency [Hz]
     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]
     float locktime;                          //!< Number of seconds of continuous tracking [sec]
-    unsigned long channel_status;
+    // unsigned long channel_status;
+    ChannelStatus channel_status;
 };
 /*!
  * RANGE Message Structure
@@ -731,18 +732,20 @@ struct CompressedRangeRecord {
     int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
     uint16_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
     uint16_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
-    uint8_t satellite_prn:8;                       //!< SV PRN number
+    uint16_t satellite_prn:8;                       //!< SV PRN number
     uint32_t locktime:21;                           //!< Number of seconds of continuous tracking [sec]
     uint32_t carrier_to_noise:5;                    //!< Signal/Noise [dB-Hz]
     uint32_t reserved:22;
     // uint16_t reservedb:16;
-});
+}//;
+);
 
 PACK(
 struct CompressedRangeData {
     ChannelStatus channel_status;                   //!< channel tracking status
     CompressedRangeRecord range_record;
-});
+}//;
+);
 
 /*!
  * RANGECMP Message Structure
@@ -754,7 +757,8 @@ struct CompressedRangeMeasurements {
     uint32_t number_of_observations;                 //!< Number of ranges observations in the following message
     CompressedRangeData range_data[MAX_CHAN];       //!< Range data for each available channel
     char 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
-});
+}//;
+);
 
 //*******************************************************************************
 // SATELLITE INFORMATION GPS STRUCTURES

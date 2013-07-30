@@ -730,15 +730,16 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             memset(&ranges, 0, sizeof(ranges));
             memcpy(&ranges, message, sizeof(ranges));
             if (range_measurements_callback_)
-            	// log_info_("novatel driver sending range");
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
-            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
+            // memset(&cmp_ranges, 0, sizeof(cmp_ranges));
+            printf("Driver: Rangecmp: length = %i\n", length);
+            printf("Driver: Rangecmp: sizeof = %i\n", sizeof(cmp_ranges));
+            // memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
             memcpy(&cmp_ranges, message, length);
             if (compressed_range_measurements_callback_)
-            	// log_info_("Novatel driver sending compressed range");
             	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
             break;
         case GPSEPHEMB_LOG_TYPE:
