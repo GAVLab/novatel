@@ -39,6 +39,9 @@
 #define NOVATELSTRUCTURES_H
 
 #include "novatel_enums.h"
+#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
+namespace novatel {
 
 #define MAX_NOUT_SIZE      (8192)   // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
 #define EPH_CHAN 33
@@ -63,7 +66,7 @@
 	#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
 #endif
 
-#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
 
 
 //*******************************************************************************
@@ -1145,7 +1148,6 @@ struct ReceiverHardwareStatus
     int8_t crc[4];              //!< 32-bit crc
 };
 
-
-
+}
 
 #endif

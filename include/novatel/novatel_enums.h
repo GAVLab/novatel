@@ -4,6 +4,7 @@
 
 #include <stdint.h>  // use fixed size integer types, rather than standard c++ types
 
+namespace novatel {
 
 //*******************************************************************************
 // USER-DEFINED ENUMS
@@ -324,5 +325,7 @@ enum BINARY_LOG_TYPE
   VEHICLEBODYROTATION_LOG_TYPE = 642
 };
 typedef enum BINARY_LOG_TYPE BINARY_LOG_TYPE;
+
+}
 
 #endif
