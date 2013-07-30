@@ -288,6 +288,19 @@ bool Novatel::SendCommand(std::string cmd_msg) {
 	}
 }
 
+bool Novatel::SetInitialPosition(double latitude, double longitude, double height) {
+    std::stringstream pos_cmd;
+    pos_cmd << "SETAPPROXPOS " << latitude << " " << longitude << " " << height;
+    return SendCommand(pos_cmd.str());
+
+}
+
+bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
+    std::stringstream time_cmd;
+    time_cmd << "SETAPPROXTIME " << gps_week << " " << gps_seconds;
+    return SendCommand(time_cmd.str());
+}
+
 bool Novatel::HardwareReset(uint8_t rst_delay) {
 	// Resets receiver to cold start, does NOT clear non-volatile memory!
 	std::stringstream rst_cmd;

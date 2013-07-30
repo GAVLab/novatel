@@ -172,6 +172,8 @@ public:
 
     bool SendCommand(std::string cmd_msg);
 
+    bool SetInitialPosition(double latitude, double longitude, double height);
+    bool SetInitialTime(uint32_t gps_week, double gps_seconds);
     bool HardwareReset(uint8_t rst_delay=0);
 
 	void UnlogAll();
