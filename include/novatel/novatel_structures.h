@@ -607,7 +607,10 @@ struct IonosphericModel {
     uint8_t 	crc[4];	//!< 32-bit cyclic redundancy check (CRC)
 });
 
-
+/*!
+ * Channel Tracking Status
+ * Used in logs RANGE and TRACKSTAT
+ */
 PACK(
 struct ChannelStatus {
 	unsigned tracking_state : 5;
@@ -873,7 +876,7 @@ struct TimeOffset {
 struct TrackStatusData {
     uint16_t prn;                       //!< SV prn
     int16_t glonass_frequency;          //!< GLONASS frequency +7
-    uint32_t channel_tracking_status;   //!< Channel tracking status
+    ChannelStatus channel_track_status; //!< Channel tracking status
     double pseudorange;                 //!< Pseudorange
     float doppler_frequency;            //!< Doppler frequency [Hz]
     float cno_ratio;                    //!< Carrier to noise density ratio [dB-Hz]
