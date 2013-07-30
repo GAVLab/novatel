@@ -747,8 +747,12 @@ struct GpsEphemeris
  * and three from the satellite with the parity information removed.
  */
 PACK(
+struct Word {
+    uint8_t byte[3];
+});
+PACK(
 struct Subframe {
-    uint8_t byte[30];
+    Word word[10];
 });
 PACK(
 struct RawEphemeris {
