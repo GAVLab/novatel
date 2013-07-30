@@ -89,6 +89,7 @@ typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedR
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
 typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
+typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
 typedef boost::function<void(ReceiverHardwareStatus&, double&)> ReceiverHardwareStatusCallback;
 typedef boost::function<void(Position&, double&)> BestPositionCallback;
@@ -241,6 +242,8 @@ public:
         raw_ephemeris_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
+    void set_satellite_visibility_callback(SatelliteVisibilityCallback handler){
+        satellite_visibility_callback_=handler;};
     void set_time_offset_callback(TimeOffsetCallback handler){
         time_offset_callback_=handler;};
     void set_receiver_hardware_status_callback(ReceiverHardwareStatusCallback handler){
@@ -341,6 +344,7 @@ private:
     GpsEphemerisCallback gps_ephemeris_callback_;
     RawEphemerisCallback raw_ephemeris_callback_;
     SatellitePositionsCallback satellite_positions_callback_;
+    SatelliteVisibilityCallback satellite_visibility_callback_;
     TimeOffsetCallback time_offset_callback_;
     ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
     BestPseudorangePositionCallback best_pseudorange_position_callback_;

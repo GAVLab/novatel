@@ -10,6 +10,10 @@ namespace novatel {
 // USER-DEFINED ENUMS
 //*******************************************************************************
 
+enum true_false {
+    FALSE = 0,
+    TRUE = 1
+};
 
 enum return_type {
     success,

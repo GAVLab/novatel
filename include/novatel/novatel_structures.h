@@ -380,7 +380,7 @@ struct Position
 	float differential_age;				//!< differential position age (sec)
 	float solution_age;					//!< solution age (sec)
 	uint8_t number_of_satellites;		//!< number of satellites tracked
-	uint8_t number_of_satellites_in_solution;	//!< number of satellites used in solution
+    uint8_t number_of_satellites_in_solution;	//!< number of satellites used in solution
 	uint8_t num_gps_plus_glonass_l1;	//!< number of GPS plus GLONASS L1 satellites used in solution
 	uint8_t num_gps_plus_glonass_l2;	//!< number of GPS plus GLONASS L2 satellites used in solution
 	uint8_t reserved;					//!< reserved
@@ -803,6 +803,36 @@ struct SatellitePositions {
     double dReserved1;                      //!< Reserved
     uint32_t number_of_satellites;          //!< Number of satellites in following message
     SatellitePositionData data[MAX_CHAN];   //!< Position data for each satellite
+    uint8_t 	crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+});
+
+/*!
+ * SATVIS Message Structure
+ * The SATVIS log is meant to provide a brief overview. The satellite positions
+ * and velocities used in the computation of this log are based on Almanac
+ * orbital parameters, not the higher precision Ephemeris parameters
+ */
+PACK(
+struct SatelliteVisibilityData {
+    int16_t satellite_prn;              //!< SV PRN number
+        //!< GPS 1-32
+        //!< SBAS 120-138
+        //!< GLONASS
+    int16_t glonass_frequency;          //!< GLONASS frequency +7
+    uint32_t health;                    //!< Satellite Health
+    double elevation;                   //!< SV elevation [deg]
+    double azimuth;                     //!< SV azimuth [deg]
+    double theoretical_doppler;         //!< Theoretical Doppler frequency of SV [Hz]
+    double apparent_doppler;            //!< Theoretical Doppler with clock drift correction added [Hz]
+});
+
+PACK(
+struct SatelliteVisibility {
+    Oem4BinaryHeader header;				//!< Message header
+    true_false sat_vis;                     //!< Reserved
+    true_false complete_almanac_used;       //!< Was Complete almanac used
+    uint32_t number_of_satellites;          //!< Number of satellites in following message
+    SatelliteVisibilityData data[MAX_CHAN];   //!< Position data for each satellite
     uint8_t 	crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
 });
 

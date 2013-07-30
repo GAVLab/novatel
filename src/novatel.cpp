@@ -852,6 +852,12 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             if (satellite_positions_callback_)
             	satellite_positions_callback_(sat_pos, read_timestamp_);
             break;
+        case SATVISB_LOG_TYPE:
+            SatelliteVisibility sat_vis;
+            memcpy(&sat_vis, message, sizeof(sat_vis));
+            if(satellite_visibility_callback_)
+                satellite_visibility_callback_(sat_vis, read_timestamp_);
+            break;
         case TIMEB_LOG_TYPE:
             TimeOffset time_offset;
             memcpy(&time_offset, message, sizeof(time_offset));
