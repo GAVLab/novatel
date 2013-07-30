@@ -174,6 +174,9 @@ public:
 
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
+
+    bool SetL1CarrierSmoothing(uint32_t time_constant); //!< 2<= time constant <= 2000 [sec]
+
     bool HardwareReset(uint8_t rst_delay=0);
 
 	void UnlogAll();

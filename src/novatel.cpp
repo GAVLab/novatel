@@ -301,6 +301,13 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     return SendCommand(time_cmd.str());
 }
 
+bool Novatel::SetL1CarrierSmoothing(uint32_t time_constant) { //!< 2<= time constant <= 2000 [sec]
+    std::stringstream smooth_cmd;
+    smooth_cmd << "CSMOOTH " << time_constant;
+    return SendCommand(smooth_cmd.str());
+
+}
+
 bool Novatel::HardwareReset(uint8_t rst_delay) {
 	// Resets receiver to cold start, does NOT clear non-volatile memory!
 	std::stringstream rst_cmd;
