@@ -22,17 +22,15 @@
  */
 
 #include <iostream>
-#include <fstream>
 #include <sstream>
 #include <cmath>
 #include <cfloat>
 #include <algorithm>
 #include <string>
-// #include <chrono>
-// #include <thread>
 
 #include <ros/ros.h>
 #include <tf/tf.h>
+ 
 
 #ifdef WIN32
  #ifdef DELETE
@@ -43,11 +41,8 @@
 #endif
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
-#include "gps_msgs/Ephemeris.h"
-#include "gps_msgs/L1L2Range.h"
 
 #include <boost/tokenizer.hpp>
-#include <boost/thread/thread.hpp>
 
 #include "novatel/novatel.h"
 using namespace novatel;
@@ -64,33 +59,40 @@ void handleDebugMessages(const std::string &msg) {ROS_DEBUG("%s",msg.c_str());}
 static double radians_to_degrees = 180.0 / M_PI;
 static double degrees_to_radians = M_PI / 180.0;
 static double degrees_square_to_radians_square = degrees_to_radians*degrees_to_radians;
+
 static double sigma_v = 0.05; // velocity std dev in m/s
 
 // ROS Node class
 class NovatelNode {
 public:
   NovatelNode() : nh_("~"){
+
     // set up logging handlers
     gps_.setLogInfoCallback(handleInfoMessages);
     gps_.setLogWarningCallback(handleWarningMessages);
     gps_.setLogErrorCallback(handleErrorMessages);
     gps_.setLogDebugCallback(handleDebugMessages);
-    // set up messaging callbacks
+
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
-    gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
-    gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
-    gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
+    //gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
+    //gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
+    gps_.set_ins_position_velocity_attitude_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
+    gps_.set_ins_covariance_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));    gps_.set_raw_imu_short_callback(boost::bind(&NovatelNode::RawImuHandler, this, _1, _2));
     gps_.set_receiver_hardware_status_callback(boost::bind(&NovatelNode::HardwareStatusHandler, this, _1, _2));
-    gps_.set_gps_ephemeris_callback(boost::bind(&NovatelNode::EphemerisHandler, this, _1, _2));
-    gps_.set_compressed_range_measurements_callback(boost::bind(&NovatelNode::CompressedRangeHandler, this, _1, _2));
-    // gps_.set_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
-    // gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
-    gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
+
   }
 
   ~NovatelNode() {
     this->disconnect();
+  }
+
+  double psi2theta(double psi) {
+    return M_PI/2-psi;
+  }  
+
+  double theta2psi(double theta) {
+    return M_PI/2-theta;
   }
 
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
@@ -127,8 +129,10 @@ public:
       sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
 
     // TODO: convert positon to lat, long, alt to export
+
     // TODO: add covariance
     // covariance is east,north,up in row major form
+
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -140,9 +144,6 @@ public:
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
-    // cur_enu_[0] = pos.easting;
-    // cur_enu_[1] = pos.northing;
-    // cur_enu_[2] = pos.height;
     // covariance representation given in REP 103
     //http://www.ros.org/reps/rep-0103.html#covariance-representation
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -158,12 +159,12 @@ public:
     if ((cur_velocity_.header.gps_week==pos.header.gps_week) 
          && (cur_velocity_.header.gps_millisecs==pos.header.gps_millisecs)) 
     {
-      cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground);
-      cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground);
+      cur_odom_.twist.twist.linear.x=cur_velocity_.horizontal_speed*cos(cur_velocity_.track_over_ground*degrees_to_radians);
+      cur_odom_.twist.twist.linear.y=cur_velocity_.horizontal_speed*sin(cur_velocity_.track_over_ground*degrees_to_radians);
       cur_odom_.twist.twist.linear.z=cur_velocity_.vertical_speed;
 
       cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
-          cur_velocity_.track_over_ground*degrees_to_radians);
+          psi2theta(cur_velocity_.track_over_ground*degrees_to_radians));
 
       // if i have a fix, velocity std, dev is constant
       if (cur_velocity_.position_type>NONE) {
@@ -178,16 +179,23 @@ public:
         cur_odom_.twist.covariance[0] = DBL_MAX;
         cur_odom_.twist.covariance[7] = DBL_MAX;
       }
+
     }
-    odom_publisher_.publish(cur_odom_);   
+
+    odom_publisher_.publish(cur_odom_);
+      
+
   }
 
   void BestVelocityHandler(Velocity &vel, double &timestamp) {
     ROS_DEBUG("Received BestVel");
     cur_velocity_ = vel;
+
   }
 
-  void InsPvaHandler(InsPositionVelocityAttitudeShort &ins_pva, double &timestamp) {
+  void InsPvaHandler(InsPositionVelocityAttitude &ins_pva, double &timestamp) {
+    //ROS_INFO("Received inspva.");
+
     // convert pva position to UTM
     double northing, easting;
     int zoneNum;
@@ -220,7 +228,9 @@ public:
     cur_odom_.pose.pose.position.x = easting;
     cur_odom_.pose.pose.position.y = northing;
     cur_odom_.pose.pose.position.z = ins_pva.height;
-    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll,ins_pva.pitch,ins_pva.azimuth);
+    cur_odom_.pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(ins_pva.roll*degrees_to_radians,
+          ins_pva.pitch*degrees_to_radians,
+          psi2theta(ins_pva.azimuth*degrees_to_radians));
 
     //cur_odom_->pose.covariance[0] = 
 
@@ -231,8 +241,8 @@ public:
 
     // see if there is a matching ins covariance message
     if ((cur_ins_cov_.gps_week==ins_pva.gps_week) 
-         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs))
-    {
+         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs)) {
+
       cur_odom_.pose.covariance[0] = cur_ins_cov_.position_covariance[0];
       cur_odom_.pose.covariance[1] = cur_ins_cov_.position_covariance[1];
       cur_odom_.pose.covariance[2] = cur_ins_cov_.position_covariance[2];
@@ -262,166 +272,34 @@ public:
       cur_odom_.twist.covariance[12] = cur_ins_cov_.velocity_covariance[6];
       cur_odom_.twist.covariance[13] = cur_ins_cov_.velocity_covariance[7];
       cur_odom_.twist.covariance[14] = cur_ins_cov_.velocity_covariance[8];
+
     }
+
     odom_publisher_.publish(cur_odom_);
+
+
   }
 
   void RawImuHandler(RawImuShort &imu, double &timestamp) {
+
   }
 
-  void InsCovHandler(InsCovarianceShort &cov, double &timestamp) {
-    cur_ins_cov_ = cov;
+  void InsCovHandler(InsCovariance &cov, double &timestamp) {
+     //ROS_INFO("Received inscov.");
+     cur_ins_cov_ = cov;
   }
 
   void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
-  }
 
-  void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
-    // ROS_DEBUG("Received GpsEphemeris");
-    cur_ephem_.header.stamp = ros::Time::now();
-    cur_ephem_.gps_time = ephem.header.gps_millisecs*1000;
-    cur_ephem_.obs = 1;
-    uint8_t n = ephem.prn; // how drtk expects it
-    cur_ephem_.prn[n] = ephem.prn;
-    cur_ephem_.health[n] = ephem.health;
-    cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
-    cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
-    cur_ephem_.eccentricity[n] = ephem.eccentricity;
-    cur_ephem_.perigee_arg[n] = ephem.omega;
-    cur_ephem_.cos_latitude[n] = ephem.latitude_cosine;
-    cur_ephem_.sin_latitude[n] = ephem.latitude_sine;
-    cur_ephem_.cos_orbit_radius[n] = ephem.orbit_radius_cosine;
-    cur_ephem_.sin_orbit_radius[n] = ephem.orbit_radius_sine;
-    cur_ephem_.cos_inclination[n] = ephem.inclination_cosine;
-    cur_ephem_.sin_inclination[n] = ephem.inclination_sine;
-    cur_ephem_.inclination_angle[n] = ephem.inclination_angle;
-    cur_ephem_.right_ascension[n] = ephem.right_ascension;
-    cur_ephem_.mean_motion_diff[n] = ephem.mean_motion_difference;
-    cur_ephem_.inclination_rate[n] = ephem.inclination_angle_rate;
-    cur_ephem_.ascension_rate[n] = ephem.right_ascension_rate;
-    cur_ephem_.time_of_week[n] = ephem.time_of_week;
-    cur_ephem_.reference_time[n] = ephem.time_of_ephemeris;
-    cur_ephem_.clock_correction[n] = ephem.sv_clock_correction;
-    cur_ephem_.group_delay[n] = ephem.group_delay_difference;
-    cur_ephem_.clock_aging_1[n] = ephem.clock_aligning_param_0;
-    cur_ephem_.clock_aging_2[n] = ephem.clock_aligning_param_1;
-    cur_ephem_.clock_aging_3[n] = ephem.clock_aligning_param_2;
-
-    ephemeris_publisher_.publish(cur_ephem_);
-  }
-
-  void CompressedRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    gps_msgs::L1L2Range cur_range_;
-    cur_range_.header.stamp = ros::Time::now();
-    cur_range_.gps_time = range.header.gps_millisecs;
-    uint8_t L1_obs = 0, L2_obs = 0;
-    // uint8_t m1 = 0, m2=0; // m is output index (compress to front)
-    // ROS_INFO_STREAM("Num Obs: " << range.number_of_observations);
-    // cur_range_.num_obs = range.number_of_observations;
-
-    std::ofstream outfile;
-    outfile.open("/tmp/fuck/output.txt");
-    // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
-
-
-
-
-
-
-    for (int n=0; n<range.number_of_observations; n++) { //! FIXME how far should this iterate?
-      // make sure something on this index & it is a GPS constellation SV
-
-      // if (
-      //   (!range.range_data[n].range_record.satellite_prn) // empty field
-      //     || (range.range_data[n].channel_status.satellite_sys != 0)
-      //     || (range.range_data[n].range_record.satellite_prn > 33)
-      //   )
-      // {
-      //   // ROS_INFO_STREAM("Skipping PRN "<< std::hex << range.range_data[n].range_record.satellite_prn);
-      //   continue;
-      // }
-      outfile << "n=" << n << "\n";
-      outfile << "\t" << range.range_data[n].range_record.satellite_prn << "\n";
-      outfile << "\t" << range.range_data[n].range_record.pseudorange/128. << "\n";
-      outfile << "\t" << range.range_data[n].range_record.pseudorange_standard_deviation << "\n";
-      outfile << "\t" << range.range_data[n].range_record.doppler/256. << "\n";
-      outfile << "\t" << range.range_data[n].range_record.carrier_to_noise + 20. << "\n";
-      outfile << "\t" << range.range_data[n].range_record.accumulated_doppler/256. << "\n";
-      outfile << "\t" << range.range_data[n].range_record.accumulated_doppler_std_deviation << "\n"; // << "\n"
-
-      uint8_t prn_idx = range.range_data[n].range_record.satellite_prn;
-      switch (range.range_data[n].channel_status.signal_type) {
-        case 0: // L1 C/A
-          // ROS_INFO_STREAM("")
-          // cur_range_.L1.prn[m1] = range.range_data[n].range_record.satellite_prn;
-          cur_range_.L1.prn[prn_idx] = prn_idx;
-          cur_range_.L1.psr[prn_idx] = range.range_data[n].range_record.pseudorange/128.;
-          cur_range_.L1.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
-          cur_range_.L1.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
-          cur_range_.L1.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L1.carrier.phase[prn_idx] = range.range_data[n].range_record.accumulated_doppler/256.;
-          cur_range_.L1.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
-          L1_obs++;
-          // m1++;
-          break;
-        case 5: // L2 P
-        case 9: // L2 P codeless
-        case 17: // L2 C
-          cur_range_.L2.prn[prn_idx] = prn_idx;
-          cur_range_.L2.psr[prn_idx] = range.range_data[n].range_record.pseudorange/128.;
-          cur_range_.L2.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
-          cur_range_.L2.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
-          cur_range_.L2.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L2.carrier.phase[prn_idx] = range.range_data[n].range_record.accumulated_doppler/256.;
-          cur_range_.L2.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
-          L2_obs++;
-          // m2++;
-          break;
-        default:
-          ROS_DEBUG_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
-          break;
-      }
-    }
-    
-
-    outfile.close();
-    
-
-    cur_range_.L1.obs = L1_obs;
-    cur_range_.L2.obs = L2_obs;
-    cur_range_.lat = cur_lla_[0];
-    cur_range_.lon = cur_lla_[1];
-    cur_range_.alt = cur_lla_[2];
-    // cur_range_.lat_cov = pow(cur_lla_std_[0], 2);
-    // cur_range_.lon_cov = pow(cur_lla_std_[1], 2);
-    // cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
-
-    dual_band_range_publisher_.publish(cur_range_);
-  }
-
-
-
-  void PsrPosHandler(Position &pos, double timestamp) {
-    cur_lla_[0] = pos.latitude;
-    cur_lla_[1] = pos.longitude;
-    cur_lla_[2] = pos.height;
-    cur_lla_std_[0] = pos.latitude_standard_deviation;
-    cur_lla_std_[1] = pos.longitude_standard_deviation;
-    cur_lla_std_[2] = pos.height_standard_deviation;
-  }
-
-  void RawMsgHandler(unsigned char *msg) {
-    // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
   }
 
   void run() {
+
     if (!this->getParameters())
       return;
 
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
     this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
-    this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
-    this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::L1L2Range>(dual_band_range_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -434,7 +312,7 @@ public:
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -446,31 +324,8 @@ public:
       default_logs.precision(2);
       default_logs << "INSPVAB ONTIME " << std::fixed << span_default_logs_period_ << ";";
       default_logs << "INSCOVB ONTIME " << std::fixed << span_default_logs_period_;
-      gps_.ConfigureLogs(default_logs.str());
-    }
-
-    // FIXME. please.
-    // configure logging of ephemeris
-    if (ephem_log_) {
-      // std::stringstream default_logs;
-      // default_logs << "GPSEPHEMB ONNEW";
-      // default_logs << "GPSEPHEMB ONTIME 0.5";
-      // gps_.ConfigureLogs(default_logs.str());
-      gps_.ConfigureLogs("GPSEPHEMB ONTIME 0.5");
-    }
-
-    if (range_default_logs_period_>0) {
-      std::stringstream default_logs;
-      default_logs.precision(2);
-      default_logs << "RANGECMPB ONTIME " << std::fixed << range_default_logs_period_ << ";";
-      gps_.ConfigureLogs(default_logs.str());
-    }
-
-    if (psrpos_default_logs_period_>0) {
-      std::stringstream default_logs;
-      default_logs.precision(2);
-      default_logs << "PSRPOSB ONTIME " << std::fixed << psrpos_default_logs_period_ << ";";
-      gps_.ConfigureLogs(default_logs.str());
+      ROS_INFO_STREAM("default logs: " << default_logs);  
+    gps_.ConfigureLogs(default_logs.str());
     }
 
     // configure additional logs
@@ -508,19 +363,10 @@ public:
         gps_.ConfigureInterfaceMode(com_port,rx_mode,tx_mode);
         gps_.ConfigureBaudRate(com_port,baudrate);
       }
-    }
-    if (!ephem_log_) {
-      // get an ephemeris blast for a little bit, then only on new.
-      for (uint8_t n=0; n<5; n++) {
-        ros::spinOnce();
-        boost::this_thread::sleep( boost::posix_time::milliseconds(500) );
-        gps_.ConfigureLogs("GPSEPHEMB ONTIME 0");
-        gps_.ConfigureLogs("GPSEPHEMB ONNEW");
-      }
-      ros::spin();
-    } else
-      ros::spin();
 
+    }
+
+    ros::spin();
 
   } // function
 
@@ -532,47 +378,32 @@ protected:
   }
 
   bool getParameters() {
-
-    name_ = ros::this_node::getName();
+    // Get the serial ports
 
     nh_.param("odom_topic", odom_topic_, std::string("/gps_odom"));
-    ROS_INFO_STREAM(name_ << ": Odom Topic: " << odom_topic_);
+    ROS_INFO_STREAM("Odom Topic: " << odom_topic_);
 
     nh_.param("nav_sat_fix_topic", nav_sat_fix_topic_, std::string("/gps_fix"));
-    ROS_INFO_STREAM(name_ << ": NavSatFix Topic: " << nav_sat_fix_topic_);
-
-    nh_.param("ephemeris_topic", ephemeris_topic_, std::string("/ephemeris"));
-    ROS_INFO_STREAM(name_ << ": Ephemeris Topic: " << ephemeris_topic_);
-
-    nh_.param("dual_band_range_topic", dual_band_range_topic_, std::string("/range"));
-    ROS_INFO_STREAM(name_ << ": L1L2Range Topic: " << dual_band_range_topic_);
+    ROS_INFO_STREAM("NavSatFix Topic: " << nav_sat_fix_topic_);
 
     nh_.param("port", port_, std::string("/dev/ttyUSB0"));
-    ROS_INFO_STREAM(name_ << ": Port: " << port_);
+    ROS_INFO_STREAM("Port: " << port_);
 
     nh_.param("baudrate", baudrate_, 9600);
-    ROS_INFO_STREAM(name_ << ": Baudrate: " << baudrate_);
+    ROS_INFO_STREAM("Baudrate: " << baudrate_);
 
     nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
-    ROS_INFO_STREAM(name_ << ": Log Commands: " << log_commands_);
+    ROS_INFO_STREAM("Log Commands: " << log_commands_);
 
     nh_.param("configure_port", configure_port_, std::string(""));
-    ROS_INFO_STREAM(name_ << ": Configure port: " << configure_port_);
+    ROS_INFO_STREAM("Configure port: " << configure_port_);
 
     nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
-    ROS_INFO_STREAM(name_ << ": Default GPS logs period: " << gps_default_logs_period_);
+    ROS_INFO_STREAM("Default GPS logs period: " << gps_default_logs_period_);
 
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
-    ROS_INFO_STREAM(name_ << ": Default SPAN logs period: " << span_default_logs_period_);
+    ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
 
-    nh_.param("ephem_log", ephem_log_, false);
-    ROS_INFO_STREAM(name_ << ": Ephemeris logging enabled: " << ephem_log_);
-
-    nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
-    ROS_INFO_STREAM(name_ << ": Default Range logs period: " << range_default_logs_period_);
-
-    nh_.param("psrpos_default_logs_period", psrpos_default_logs_period_, 0.05);
-    ROS_INFO_STREAM(name_ << ": Default Pseudorange Position logs period: " << psrpos_default_logs_period_);
 
     return true;
   }
@@ -581,36 +412,22 @@ protected:
   // ROSNODE Members
   ////////////////////////////////////////////////////////////////
   ros::NodeHandle nh_;
-  std::string name_;
   ros::Publisher odom_publisher_;
   ros::Publisher nav_sat_fix_publisher_;
-  ros::Publisher ephemeris_publisher_;
-  ros::Publisher dual_band_range_publisher_;
 
   Novatel gps_;
   std::string odom_topic_;
   std::string nav_sat_fix_topic_;
-  std::string ephemeris_topic_;
-  std::string dual_band_range_topic_;
   std::string port_;
   std::string log_commands_;
   std::string configure_port_;
   double gps_default_logs_period_;
   double span_default_logs_period_;
-  double range_default_logs_period_;
-  double psrpos_default_logs_period_;
-  bool ephem_log_;
   int baudrate_;
   double poll_rate_;
 
   Velocity cur_velocity_;
-  InsCovarianceShort cur_ins_cov_;
-  gps_msgs::Ephemeris cur_ephem_;
-  gps_msgs::L1L2Range cur_range_;
-  double cur_lla_[3];
-  double cur_lla_std_[3];
-  // std::vector<double> cur_enu_;
-
+  InsCovariance cur_ins_cov_;
 
 };
 

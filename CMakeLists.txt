@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(novatel)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-## libraries found here are added to catkin_LIBRARIES and linked automatically
-find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf gps_msgs)
-
 
 #######################################
 ## Check for ROS ##
@@ -19,18 +13,27 @@ if (NOT catkin_FOUND)
 endif(NOT catkin_FOUND)
 
 if (BUILD_WITH_ROS)
+	## Find catkin macros and libraries
+	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+	## is used, also find other catkin packages
+	## libraries found here are added to catkin_LIBRARIES and linked automatically
+	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
+
+
+
 	## LIBRARIES: libraries you create in this project that dependent projects also need
 	## CATKIN_DEPENDS: catkin_packages dependent projects also need
 	## DEPENDS: system dependencies of this project that dependent projects also need
 	catkin_package(
 	  INCLUDE_DIRS include
 	  LIBRARIES novatel
-	  CATKIN_DEPENDS serial roslib roscpp rosconsole gps_msgs
+	  CATKIN_DEPENDS serial roslib roscpp rosconsole
 	  DEPENDS Boost
 	)
 else()
 	SET(CATKIN_PACKAGE_LIB_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
 	SET(CATKIN_PACKAGE_BIN_DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+	SET(CATKIN_PACKAGE_INCLUDE_DESTINATION "${CMAKE_INSTALL_PREFIX}/include")
 	# TODO: need to find serial library here
 	find_package(serial REQUIRED)
 	set(catkin_INCLUDE_DIRS ${serial_INCLUDE_DIRS})
@@ -83,11 +86,13 @@ endif (BUILD_WITH_ROS)
 
 
 # Mark executables and/or libraries for installation
+if(BUILD_WITH_ROS)
 install(TARGETS novatel novatel_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+endif (BUILD_WITH_ROS)
 
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}/
