@@ -741,6 +741,28 @@ struct GpsEphemeris
     uint8_t crc[4];                 //!< 32-bit cyclic redundancy check (CRC)
 });
 
+/*!
+ * RAWEPHEM Message Structure
+ * contains the raw binary information for subframes one, two
+ * and three from the satellite with the parity information removed.
+ */
+PACK(
+struct Subframe {
+    uint8_t byte[30];
+});
+PACK(
+struct RawEphemeris {
+    Oem4BinaryHeader header;
+    uint32_t prn;                       //!< Satellite PRN number
+    uint32_t ephem_reference_week_num;  //!< Ephemeris reference week number
+    uint32_t ephem_reference_seconds;   //!< Ephemeris reference time [sec]
+    Subframe subframe1;                 //!< Subframe 1 data
+    Subframe subframe2;                 //!< Subframe 2 data
+    Subframe subframe3;                 //!< Subframe 3 data
+    uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+
+});
+
 
 /*!
  * Satellite Position Structure

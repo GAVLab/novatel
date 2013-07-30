@@ -820,6 +820,12 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             if (gps_ephemeris_callback_)
             	gps_ephemeris_callback_(ephemeris, read_timestamp_);
             break;
+        case RAWEPHEMB_LOG_TYPE:
+            RawEphemeris raw_ephemeris;
+            memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
+            if (raw_ephemeris_callback_)
+                raw_ephemeris_callback_(raw_ephemeris, read_timestamp_);
+            break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
             memcpy(&sat_pos, message, sizeof(sat_pos));

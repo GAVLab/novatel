@@ -87,6 +87,7 @@ typedef boost::function<void(IonosphericModel&, double&)> IonosphericModelCallba
 typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCallback;
 typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
+typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
 typedef boost::function<void(ReceiverHardwareStatus&, double&)> ReceiverHardwareStatusCallback;
@@ -231,6 +232,8 @@ public:
         compressed_range_measurements_callback_=handler;};
     void set_gps_ephemeris_callback(GpsEphemerisCallback handler){
         gps_ephemeris_callback_=handler;};
+    void set_raw_ephemeris_callback(RawEphemerisCallback handler){
+        raw_ephemeris_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
     void set_time_offset_callback(TimeOffsetCallback handler){
@@ -331,6 +334,7 @@ private:
     RangeMeasurementsCallback range_measurements_callback_;
     CompressedRangeMeasurementsCallback compressed_range_measurements_callback_;
     GpsEphemerisCallback gps_ephemeris_callback_;
+    RawEphemerisCallback raw_ephemeris_callback_;
     SatellitePositionsCallback satellite_positions_callback_;
     TimeOffsetCallback time_offset_callback_;
     ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
