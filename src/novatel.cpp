@@ -301,6 +301,42 @@ bool Novatel::SetSvElevationAngleCutoff(uint8_t angle) {
     }
 }
 
+void Novatel::PDPFilterDisable() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER " << DISABLE;
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterDisable(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::PDPFilterEnable() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER " << ENABLE;
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterEnable(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::PDPFilterReset() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER " << RESET;
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterReset(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
 bool Novatel::SetInitialPosition(double latitude, double longitude, double height) {
     std::stringstream pos_cmd;
     pos_cmd << "SETAPPROXPOS " << latitude << " " << longitude << " " << height;

@@ -189,6 +189,15 @@ public:
      */
     bool SetSvElevationAngleCutoff(uint8_t angle = 5.0);
 
+    /*!
+     * Pseudrange/Delta-Phase filter (PDPFILTER)- smooths positions
+     * and bridges gaps in GPS coverage. Enabled by default on
+     * OEMStar receiver.
+     */
+    void PDPFilterDisable();
+    void PDPFilterEnable();
+    void PDPFilterReset();
+
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
 

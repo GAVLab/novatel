@@ -285,6 +285,12 @@ enum EventType
 	SET=1		//!< bit was set
 };
 
+enum Switch //!< Used in PDPFILTER Command
+{
+    DISABLE = 0,
+    ENABLE = 1,
+    RESET = 2,
+};
 
 enum BINARY_LOG_TYPE
 {
