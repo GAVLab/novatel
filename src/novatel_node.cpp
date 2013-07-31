@@ -28,11 +28,10 @@
 #include <cfloat>
 #include <algorithm>
 #include <string>
-// #include <chrono>
-// #include <thread>
 
 #include <ros/ros.h>
 #include <tf/tf.h>
+ 
 
 #ifdef WIN32
  #ifdef DELETE
@@ -64,18 +63,20 @@ void handleDebugMessages(const std::string &msg) {ROS_DEBUG("%s",msg.c_str());}
 static double radians_to_degrees = 180.0 / M_PI;
 static double degrees_to_radians = M_PI / 180.0;
 static double degrees_square_to_radians_square = degrees_to_radians*degrees_to_radians;
+
 static double sigma_v = 0.05; // velocity std dev in m/s
 
 // ROS Node class
 class NovatelNode {
 public:
   NovatelNode() : nh_("~"){
+
     // set up logging handlers
     gps_.setLogInfoCallback(handleInfoMessages);
     gps_.setLogWarningCallback(handleWarningMessages);
     gps_.setLogErrorCallback(handleErrorMessages);
     gps_.setLogDebugCallback(handleDebugMessages);
-    // set up messaging callbacks
+
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
     //gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
@@ -136,8 +137,10 @@ public:
       sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
 
     // TODO: convert positon to lat, long, alt to export
+
     // TODO: add covariance
     // covariance is east,north,up in row major form
+
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -149,9 +152,6 @@ public:
     cur_odom_.pose.pose.position.x = pos.easting;
     cur_odom_.pose.pose.position.y = pos.northing;
     cur_odom_.pose.pose.position.z = pos.height;
-    // cur_enu_[0] = pos.easting;
-    // cur_enu_[1] = pos.northing;
-    // cur_enu_[2] = pos.height;
     // covariance representation given in REP 103
     //http://www.ros.org/reps/rep-0103.html#covariance-representation
     // (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
@@ -187,13 +187,18 @@ public:
         cur_odom_.twist.covariance[0] = DBL_MAX;
         cur_odom_.twist.covariance[7] = DBL_MAX;
       }
+
     }
-    odom_publisher_.publish(cur_odom_);   
+
+    odom_publisher_.publish(cur_odom_);
+      
+
   }
 
   void BestVelocityHandler(Velocity &vel, double &timestamp) {
     ROS_DEBUG("Received BestVel");
     cur_velocity_ = vel;
+
   }
 
   void InsPvaHandler(InsPositionVelocityAttitude &ins_pva, double &timestamp) {
@@ -244,8 +249,8 @@ public:
 
     // see if there is a matching ins covariance message
     if ((cur_ins_cov_.gps_week==ins_pva.gps_week) 
-         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs))
-    {
+         && (cur_ins_cov_.gps_millisecs==ins_pva.gps_millisecs)) {
+
       cur_odom_.pose.covariance[0] = cur_ins_cov_.position_covariance[0];
       cur_odom_.pose.covariance[1] = cur_ins_cov_.position_covariance[1];
       cur_odom_.pose.covariance[2] = cur_ins_cov_.position_covariance[2];
@@ -275,7 +280,9 @@ public:
       cur_odom_.twist.covariance[12] = cur_ins_cov_.velocity_covariance[6];
       cur_odom_.twist.covariance[13] = cur_ins_cov_.velocity_covariance[7];
       cur_odom_.twist.covariance[14] = cur_ins_cov_.velocity_covariance[8];
+
     }
+
     odom_publisher_.publish(cur_odom_);
   }
 
@@ -413,6 +420,7 @@ public:
     dual_band_range_publisher_.publish(cur_range_);
   }
 
+  void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
 
 
   void PsrPosHandler(Position &pos, double timestamp) {
@@ -429,6 +437,7 @@ public:
   }
 
   void run() {
+
     if (!this->getParameters())
       return;
 
@@ -448,7 +457,7 @@ public:
       std::stringstream default_logs;
       default_logs.precision(2);
       default_logs << "BESTUTMB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
-      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_ << ";";
+      default_logs << "BESTVELB ONTIME " << std::fixed << gps_default_logs_period_;
       gps_.ConfigureLogs(default_logs.str());
     }
 
@@ -523,6 +532,7 @@ public:
         gps_.ConfigureInterfaceMode(com_port,rx_mode,tx_mode);
         gps_.ConfigureBaudRate(com_port,baudrate);
       }
+
     }
     if (!ephem_log_) {
       // get an ephemeris blast for a little bit, then only on new.

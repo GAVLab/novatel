@@ -324,6 +324,7 @@ public:
     ephemeris_publisher_.publish(cur_ephem_);
   }
 
+<<<<<<< HEAD
   void CompressedRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
@@ -411,6 +412,11 @@ public:
     // cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
 
     dual_band_range_publisher_.publish(cur_range_);
+=======
+  void InsCovHandler(InsCovariance &cov, double &timestamp) {
+     //ROS_INFO("Received inscov.");
+     cur_ins_cov_ = cov;
+>>>>>>> d4ede99c32550dd5367ef0e555b76fee722d6329
   }
 
 
@@ -462,6 +468,7 @@ public:
       default_logs << "INSCOVB ONTIME " << std::fixed << span_default_logs_period_;
       ROS_INFO_STREAM("default logs: " << default_logs);  
     gps_.ConfigureLogs(default_logs.str());
+<<<<<<< HEAD
     }
 
     // FIXME. please.
@@ -486,6 +493,8 @@ public:
       default_logs.precision(2);
       default_logs << "PSRPOSB ONTIME " << std::fixed << psrpos_default_logs_period_ << ";";
       gps_.ConfigureLogs(default_logs.str());
+=======
+>>>>>>> d4ede99c32550dd5367ef0e555b76fee722d6329
     }
 
     // configure additional logs
@@ -620,16 +629,15 @@ protected:
 
   Velocity cur_velocity_;
 <<<<<<< HEAD
-  InsCovarianceShort cur_ins_cov_;
+  // InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
   gps_msgs::L1L2Range cur_range_;
   double cur_lla_[3];
   double cur_lla_std_[3];
-  // std::vector<double> cur_enu_;
 
 =======
-  InsCovariance cur_ins_cov_;
 >>>>>>> d4ede99c32550dd5367ef0e555b76fee722d6329
+  InsCovariance cur_ins_cov_;
 
 };
 
