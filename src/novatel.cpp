@@ -339,9 +339,9 @@ void Novatel::PDPFilterReset() {
 
 void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
     try {
-    std::stringstream pdp_cmd;
-    pdp_cmd << "PDPMODE " << mode << " " << dynamics;
-    bool result = SendCommand(pdp_cmd.str());
+        std::stringstream pdp_cmd;
+        pdp_cmd << "PDPMODE " << mode << " " << dynamics;
+        bool result = SendCommand(pdp_cmd.str());
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::PDPModeConfigure(): " << e.what();
@@ -349,6 +349,20 @@ void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
     }
 }
 
+void Novatel::SetPositionTimeout(uint32_t seconds){
+    try {
+        if(0<=seconds<=86400) {
+            std::stringstream pdp_cmd;
+            pdp_cmd << "POSTIMEOUT " << seconds;
+            bool result = SendCommand(pdp_cmd.str());
+        } else
+            log_error_("Seconds is not a valid value!");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetPositionTimeout(): " << e.what();
+        log_error_(output.str());
+    }
+}
 
 bool Novatel::SetInitialPosition(double latitude, double longitude, double height) {
     std::stringstream pos_cmd;

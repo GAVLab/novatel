@@ -199,6 +199,13 @@ public:
     void PDPFilterReset();
     void PDPModeConfigure(PDPMode mode, PDPDynamics dynamics);
 
+    /*!
+     * SetPositionTimeout (POSTIMEOUT) sets the timeout value for the
+     * position calculation. In position logs, the position_type field
+     * is set to NONE when this timeout expires (0 - 86400 sec)
+     */
+    void SetPositionTimeout(uint32_t seconds);
+
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
 
