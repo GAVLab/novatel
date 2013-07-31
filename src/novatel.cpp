@@ -443,6 +443,28 @@ void Novatel::ConfigureLogs(std::string log_string) {
 
 }
 
+void Novatel::Unlog(std::string log) {
+    try {
+        std::stringstream unlog_cmd;
+        unlog_cmd << "UNLOG " << log;
+        bool result = SendCommand(unlog_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::Unlog(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::UnlogAll() {
+    try {
+        bool result = SendCommand("UNLOGALL");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::UnlogAll(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
 void Novatel::ConfigureInterfaceMode(std::string com_port,  
   std::string rx_mode, std::string tx_mode) {
 

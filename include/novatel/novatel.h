@@ -159,11 +159,16 @@ public:
     void setLogErrorCallback(LogMsgCallback error_callback){log_error_=error_callback;};
 
     /*!
-     * Request the given list of logs from the receiver
-     * 
+     * Request the given list of logs from the receiver.
+     * Format: "[LOGNAME][MESSAGETYPE] [PORT] [LOGTYPE] [PERIOD] ..."
+     * [MESSAGETYPE] - [A]=ASCII
+     *               - [B]=Binary
+     *               . [empty]=Abreviated ASCII
      * log_string format: "BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0"
      */
     void ConfigureLogs(std::string log_string);
+    void Unlog(std::string log); //!< Stop logging a specified log
+    void UnlogAll(); //!< Stop logging all logs that aren't set with HOLD parameter
 
     /*!
      * SaveConfiguration() saves the current receiver configuration
@@ -212,8 +217,6 @@ public:
     bool SetL1CarrierSmoothing(uint32_t time_constant); //!< 2<= time constant <= 2000 [sec]
 
     bool HardwareReset(uint8_t rst_delay=0);
-
-	void UnlogAll();
 
     /*!
      * Requests version information from the receiver
