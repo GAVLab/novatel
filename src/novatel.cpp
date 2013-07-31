@@ -315,6 +315,20 @@ bool Novatel::HardwareReset(uint8_t rst_delay) {
     return SendCommand(rst_cmd.str());
 }
 
+void Novatel::SaveConfiguration() {
+    try {
+        bool result = SendCommand("SAVECONFIG");
+        if(result)
+            log_info_("Receiver configuration has been saved.");
+        else
+            log_error_("Failed to save receiver configuration!");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SaveConfiguration(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
 void Novatel::ConfigureLogs(std::string log_string) {
 	// parse log_string on semicolons (;)
 	std::vector<std::string> logs;

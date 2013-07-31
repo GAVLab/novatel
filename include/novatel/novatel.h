@@ -165,6 +165,12 @@ public:
      */
     void ConfigureLogs(std::string log_string);
 
+    /*!
+     * SaveConfiguration() saves the current receiver configuration
+     * in nonvolatile memory
+     */
+    void SaveConfiguration();
+
     void ConfigureInterfaceMode(std::string com_port,  
       std::string rx_mode, std::string tx_mode);
 
