@@ -269,7 +269,7 @@ bool Novatel::Ping(int num_attempts) {
 bool Novatel::SendCommand(std::string cmd_msg) {
 	try {
 		// sends command to GPS receiver
-        serial_port_->write(cmd_msg);
+        serial_port_->write(cmd_msg + "\r\n");
 		// wait for acknowledgement (or 2 seconds)
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
