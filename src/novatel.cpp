@@ -270,22 +270,23 @@ bool Novatel::Ping(int num_attempts) {
 bool Novatel::SendCommand(std::string cmd_msg) {
 	try {
 		// sends command to GPS receiver
-        serial_port_->write(cmd_msg);
+    serial_port_->write(cmd_msg+"\r\n");
+    // printf("SendCommand sent the command");
 		// wait for acknowledgement (or 2 seconds)
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
 		if (ack_condition_.timed_wait(lock,timeout)) {
-            log_info_("Command " + cmd_msg + "sent to GPS receiver.");
+      log_info_("Command " + cmd_msg + "sent to GPS receiver.");
 			return true;
 		} else {
-            log_error_("Command " + cmd_msg + "failed.");
+      log_error_("Command " + cmd_msg + "failed.");
 			return false;
 		}
 	} catch (std::exception &e) {
 		std::stringstream output;
-        output << "Error in Novatel::SendCommand(): " << e.what();
-        log_error_(output.str());
-        return false;
+    output << "Error in Novatel::SendCommand(): " << e.what();
+    log_error_(output.str());
+    return false;
 	}
 }
 

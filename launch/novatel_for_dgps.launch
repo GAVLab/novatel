@@ -18,10 +18,10 @@
 		<!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
 
 		<!-- Logs periods are in seconds -->
-		<param name="gps_default_logs_period" value="0.5" />
+		<param name="gps_default_logs_period" value="1.0" />
 		<param name="span_default_logs_period" value="0" />
-		<param name="range_default_logs_period" value="0.5" />
-		<param name="psrpos_default_logs_period" value="0.5 " />
+		<param name="range_default_logs_period" value="1.0" />
+		<param name="psrpos_default_logs_period" value="1.0 " />
 
 		<!-- true/false to log ephem ONNEW -->
 		<param name="ephem_log" value="true" />

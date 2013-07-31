@@ -90,21 +90,16 @@ public:
     // gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
     gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
 
-    // set the mask angle to 5 deg
-    // gps_.SendCommand("");
   }
 
   ~NovatelNode() {
     this->disconnect();
   }
 
-  double psi2theta(double psi) {
-    return M_PI/2-psi;
-  }  
 
-  double theta2psi(double theta) {
-    return M_PI/2-theta;
-  }
+  inline double psi2theta(double psi) {return M_PI/2-psi;}  
+  inline double theta2psi(double theta) {return M_PI/2-theta;}
+
 
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
     ROS_DEBUG("Received BestUtm");
@@ -194,15 +189,14 @@ public:
     }
 
     odom_publisher_.publish(cur_odom_);
-      
-
   }
+
 
   void BestVelocityHandler(Velocity &vel, double &timestamp) {
     ROS_DEBUG("Received BestVel");
     cur_velocity_ = vel;
-
   }
+
 
   void InsPvaHandler(InsPositionVelocityAttitude &ins_pva, double &timestamp) {
     //ROS_INFO("Received inspva.");
@@ -289,16 +283,18 @@ public:
     odom_publisher_.publish(cur_odom_);
   }
 
-  void RawImuHandler(RawImuShort &imu, double &timestamp) {
-  }
+
+  void RawImuHandler(RawImuShort &imu, double &timestamp) {}
+
 
   void InsCovHandler(InsCovariance &cov, double &timestamp) {
      //ROS_INFO("Received inscov.");
      cur_ins_cov_ = cov;
   }
 
-  void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
-  }
+
+  void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {}
+
 
   void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
     // ROS_DEBUG("Received GpsEphemeris");
@@ -334,6 +330,7 @@ public:
     ephemeris_publisher_.publish(cur_ephem_);
   }
 
+
   void CompressedRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
@@ -348,18 +345,19 @@ public:
     // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
 
 
-    for (int n=0; n<range.number_of_observations; n++) { //! FIXME how far should this iterate?
-      // make sure something on this index & it is a GPS constellation SV
+    for (int n=0; n<MAX_CHAN; n++) { //! FIXME how far should this iterate?
 
-      // if (
-      //   (!range.range_data[n].range_record.satellite_prn) // empty field
-      //     || (range.range_data[n].channel_status.satellite_sys != 0)
-      //     || (range.range_data[n].range_record.satellite_prn > 33)
-      //   )
-      // {
-      //   // ROS_INFO_STREAM("Skipping PRN "<< std::hex << range.range_data[n].range_record.satellite_prn);
-      //   continue;
-      // }
+      // make sure something on this index & it is a GPS constellation SV
+      if (
+        (!range.range_data[n].range_record.satellite_prn) // empty field
+          || (range.range_data[n].channel_status.satellite_sys != 0)
+          || (range.range_data[n].range_record.satellite_prn > 33)
+        )
+      {
+        // ROS_INFO_STREAM("Skipping PRN "<< std::hex << range.range_data[n].range_record.satellite_prn);
+        continue;
+      }
+      
       outfile << "n=" << n << "\n";
       outfile << "\t" << range.range_data[n].range_record.satellite_prn << "\n";
       outfile << "\t" << range.range_data[n].range_record.pseudorange/128. << "\n";
@@ -398,15 +396,13 @@ public:
           // m2++;
           break;
         default:
-          ROS_DEBUG_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
+          ROS_INFO_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
           break;
       }
     }
     
-
     outfile.close();
     
-
     cur_range_.L1.obs = L1_obs;
     cur_range_.L2.obs = L2_obs;
     cur_range_.lat = cur_lla_[0];
@@ -533,6 +529,11 @@ public:
       }
 
     }
+
+    // set the mask angle to 5 deg
+    gps_.SendCommand("ECUTOFF 5.0");
+
+    // Ros Spinner
     if (!ephem_log_) {
       // get an ephemeris blast for a little bit, then only on new.
       for (uint8_t n=0; n<5; n++) {
@@ -553,6 +554,7 @@ protected:
   void disconnect() {
     //em_.stopReading();
     //em_.disconnect();
+    gps_.SendCommand("UNLOGALL");
   }
 
   bool getParameters() {
