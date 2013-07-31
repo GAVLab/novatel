@@ -197,6 +197,7 @@ public:
     void PDPFilterDisable();
     void PDPFilterEnable();
     void PDPFilterReset();
+    void PDPModeConfigure(PDPMode mode, PDPDynamics dynamics);
 
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);

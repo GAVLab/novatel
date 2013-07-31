@@ -285,11 +285,24 @@ enum EventType
 	SET=1		//!< bit was set
 };
 
-enum Switch //!< Used in PDPFILTER Command
+enum PDPSwitch //!< Used in PDPFILTER Command
 {
     DISABLE = 0,
     ENABLE = 1,
     RESET = 2,
+};
+
+enum PDPMode
+{
+    NORMAL = 0,
+    RELATIVE = 1,
+};
+
+enum PDPDynamics
+{
+    AUTO = 0,       //!< Autodetect dynamics mode
+    STATIC = 1,     //!< Static Mode
+    DYNAMIC = 2,    //!< Dynamic Mode
 };
 
 enum BINARY_LOG_TYPE
