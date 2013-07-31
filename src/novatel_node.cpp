@@ -89,6 +89,9 @@ public:
     // gps_.set_range_measurements_callback(boost::bind(&NovatelNode::RangeHandler, this, _1, _2));
     // gps_.set_raw_msg_callback(boost::bind(&NovatelNode::RawMsgHandler, this, _1));
     gps_.set_best_pseudorange_position_callback(boost::bind(&NovatelNode::PsrPosHandler, this, _1, _2));
+
+    // set the mask angle to 5 deg
+    // gps_.SendCommand("");
   }
 
   ~NovatelNode() {
