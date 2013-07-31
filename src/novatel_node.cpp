@@ -345,10 +345,6 @@ public:
     // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
 
 
-
-
-
-
     for (int n=0; n<range.number_of_observations; n++) { //! FIXME how far should this iterate?
       // make sure something on this index & it is a GPS constellation SV
 
@@ -420,8 +416,6 @@ public:
     dual_band_range_publisher_.publish(cur_range_);
   }
 
-  void HardwareStatusHandler(ReceiverHardwareStatus &status, double &timestamp) {
-
 
   void PsrPosHandler(Position &pos, double timestamp) {
     cur_lla_[0] = pos.latitude;
@@ -432,9 +426,11 @@ public:
     cur_lla_std_[2] = pos.height_standard_deviation;
   }
 
+
   void RawMsgHandler(unsigned char *msg) {
     // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
   }
+
 
   void run() {
 
