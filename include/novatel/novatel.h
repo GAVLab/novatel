@@ -180,6 +180,15 @@ public:
 
     bool SendCommand(std::string cmd_msg);
 
+    /*!
+     * SetSvElevationCutoff
+     * Sets the elevation cut-off angle. Svs below this angle
+     * are not automatically searched for and are not used
+     * in the position calculation. Angles < 5 deg are not
+     * recommended except in specific situations
+     */
+    bool SetSvElevationAngleCutoff(uint8_t angle = 5.0);
+
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
 

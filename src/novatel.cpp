@@ -288,6 +288,19 @@ bool Novatel::SendCommand(std::string cmd_msg) {
 	}
 }
 
+bool Novatel::SetSvElevationAngleCutoff(uint8_t angle) {
+    try {
+        std::stringstream ang_cmd;
+        ang_cmd << "ECUTOFF " << angle;
+        return SendCommand(ang_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetSvElevationCutoff(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
 bool Novatel::SetInitialPosition(double latitude, double longitude, double height) {
     std::stringstream pos_cmd;
     pos_cmd << "SETAPPROXPOS " << latitude << " " << longitude << " " << height;
