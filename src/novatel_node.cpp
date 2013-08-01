@@ -41,6 +41,7 @@
 #endif
 #include "nav_msgs/Odometry.h"
 #include "sensor_msgs/NavSatFix.h"
+#include <tf/transform_broadcaster.h>
 
 #include <boost/tokenizer.hpp>
 
@@ -183,8 +184,15 @@ public:
     }
 
     odom_publisher_.publish(cur_odom_);
-      
 
+    // send tf transform
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(cur_odom_.pose.pose.position.x, cur_odom_.pose.pose.position.y, cur_odom_.pose.pose.position.z) );
+    tf::Quaternion q0;
+    q0.setRPY(0,0, psi2theta(cur_velocity_.track_over_ground*degrees_to_radians));
+    transform.setRotation(q0);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", tf_topic_));
   }
 
   void BestVelocityHandler(Velocity &vel, double &timestamp) {
@@ -277,7 +285,14 @@ public:
 
     odom_publisher_.publish(cur_odom_);
 
-
+    // send tf transform
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(cur_odom_.pose.pose.position.x, cur_odom_.pose.pose.position.y, cur_odom_.pose.pose.position.z) );
+    tf::Quaternion q0;
+    q0.setRPY(ins_pva.roll*degrees_to_radians, ins_pva.pitch*degrees_to_radians, psi2theta(ins_pva.azimuth*degrees_to_radians));
+    transform.setRotation(q0);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "odom", tf_topic_));
   }
 
   void RawImuHandler(RawImuShort &imu, double &timestamp) {
@@ -404,6 +419,8 @@ protected:
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
     ROS_INFO_STREAM("Default SPAN logs period: " << span_default_logs_period_);
 
+    nh_.param("tf_topic", tf_topic_, std::string("base_link"));
+    ROS_INFO_STREAM("TF Topic: " << tf_topic_);
 
     return true;
   }
@@ -417,6 +434,7 @@ protected:
 
   Novatel gps_;
   std::string odom_topic_;
+  std::string tf_topic_;
   std::string nav_sat_fix_topic_;
   std::string port_;
   std::string log_commands_;
