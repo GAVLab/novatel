@@ -385,10 +385,56 @@ bool Novatel::SetL1CarrierSmoothing(uint32_t time_constant) { //!< 2<= time cons
 }
 
 bool Novatel::HardwareReset(uint8_t rst_delay) {
-	// Resets receiver to cold start, does NOT clear non-volatile memory!
-	std::stringstream rst_cmd;
-    rst_cmd << "RESET " << rst_delay;
-    return SendCommand(rst_cmd.str());
+    // Resets receiver to cold start, does NOT clear non-volatile memory!
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "RESET " << rst_delay;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::HardwareReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::HotStartReset() {
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "FRESET " << LAST_POSITION;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::HotStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::WarmStartReset() {
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "FRESET " << LAST_POSITION;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::WarmStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::ColdStartReset() {
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "FRESET " << STANDARD;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::ColdStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
 }
 
 void Novatel::SaveConfiguration() {

@@ -217,6 +217,24 @@ public:
     bool SetL1CarrierSmoothing(uint32_t time_constant); //!< 2<= time constant <= 2000 [sec]
 
     bool HardwareReset(uint8_t rst_delay=0);
+    /*!
+     * HotStartReset
+     * Restarts the GPS receiver, initialized with
+     * Ephemeris, Almanac, Position, Time, etc.
+     */
+    bool HotStartReset();
+    /*!
+     * WarmStartReset
+     * Restarts the GPS receiver, initialized with
+     * Ephemeris, Almanac, NOT Position and Time info
+     */
+    bool WarmStartReset();
+    /*!
+     * ColdStartReset
+     * Restarts the GPS receiver, initialized without
+     * any initial or aiding data.
+     */
+    bool ColdStartReset();
 
     /*!
      * Requests version information from the receiver
