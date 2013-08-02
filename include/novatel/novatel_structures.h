@@ -735,8 +735,8 @@ struct CompressedRangeRecord {
     uint16_t satellite_prn:8;                       //!< SV PRN number
     uint32_t locktime:21;                           //!< Number of seconds of continuous tracking [sec]
     uint32_t carrier_to_noise:5;                    //!< Signal/Noise [dB-Hz]
-    uint32_t reserved:22;
-    // uint16_t reservedb:16;
+    uint32_t reserved:6;
+    uint16_t reservedb:16;
 }//;
 );
 
@@ -773,7 +773,7 @@ struct CompressedRangeMeasurements {
 PACK(
 struct GpsEphemeris
 {
-    Oem4BinaryHeader header;		//!< Message header
+    Oem4BinaryHeader header;        //!< Message header
     uint32_t prn;                   //!< PRN number
     double time_of_week;            //!< time stamp of subframe 0 (s)
     uint32_t health;                //!< health status, defined in ICD-GPS-200
@@ -807,6 +807,12 @@ struct GpsEphemeris
     double corrected_mean_motion;   //!< corrected mean motion
     double range_accuracy_variance; //!< user range accuracy variance
     uint8_t crc[4];                 //!< 32-bit cyclic redundancy check (CRC)
+});
+
+PACK(
+  struct GpsEphemerisData {
+    Oem4BinaryHeader header;    //!< Message header
+    GpsEphemeris ephemeris;
 });
 
 

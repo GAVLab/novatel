@@ -276,7 +276,7 @@ bool Novatel::SendCommand(std::string cmd_msg) {
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
 		if (ack_condition_.timed_wait(lock,timeout)) {
-      log_info_("Command " + cmd_msg + "sent to GPS receiver.");
+      log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
 			return true;
 		} else {
       log_error_("Command " + cmd_msg + "failed.");
@@ -579,74 +579,83 @@ void Novatel::ReadSerialPort() {
 
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
+	BINARY_LOG_TYPE message_id;
 	// add incoming data to buffer
 	for (unsigned int ii=0; ii<length; ii++) {
 		// make sure bufIndex is not larger than buffer
-		if (buffer_index_>=MAX_NOUT_SIZE) {
+		if (buffer_index_ >= MAX_NOUT_SIZE) {
 			buffer_index_=0;
-            log_warning_("Overflowed receive buffer. Buffer cleared.");
+      log_warning_("Overflowed receive buffer. Buffer cleared.");
 		}
 
-		if (buffer_index_==0) {	// looking for beginning of message
-			if (message[ii]==0xAA) {	// beginning of msg found - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-				bytes_remaining_=0;
-			} else if (message[ii]=='<') {
+		if (buffer_index_ == 0) {	// looking for beginning of message
+			if (message[ii] == 0xAA) {	// beginning of msg found - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+				bytes_remaining_ = 0;
+			} else if (message[ii] == '<') {
 				// received beginning of acknowledgement
-				reading_acknowledgement_=true;
-				buffer_index_=1;
+				reading_acknowledgement_ = true;
+				buffer_index_ = 1;
 			} else {
-                ;//log_debug_("BufferIncomingData::Received unknown data.");
+        //log_debug_("BufferIncomingData::Received unknown data.");
 			}
-		} else if (buffer_index_==1) {	// verify 2nd character of header
-			if (message[ii]==0x44) {	// 2nd byte ok - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-			} else if ((message[ii]=='O')&&reading_acknowledgement_) {
+		} else if (buffer_index_ == 1) {	// verify 2nd character of header
+			if (message[ii] == 0x44) {	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+			} else if ( (message[ii] == 'O') && reading_acknowledgement_ ) {
 				// 2nd byte of acknowledgement
-				buffer_index_=2;
+				buffer_index_ = 2;
 			} else {
 				// start looking for new message again
-				buffer_index_=0;
+				buffer_index_ = 0;
 				bytes_remaining_=0;
 				reading_acknowledgement_=false;
 			} // end if (msg[i]==0x44)
-		} else if (buffer_index_==2) {	// verify 3rd character of header
-			if (message[ii]==0x12) {	// 2nd byte ok - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-			} else if ((message[ii]=='K')&&(reading_acknowledgement_)) {
+		} else if (buffer_index_ == 2) {	// verify 3rd character of header
+			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+			} else if ( (message[ii] == 'K') && (reading_acknowledgement_) ) {
 				// final byte of acknowledgement received
-				buffer_index_=0;
-				reading_acknowledgement_=false;
+				buffer_index_ = 0;
+				reading_acknowledgement_ = false;
 				boost::lock_guard<boost::mutex> lock(ack_mutex_);
-				ack_received_=true;
+				ack_received_ = true;
 				ack_condition_.notify_all();
 				// ACK received
 				handle_acknowledgement_();
 			} else {
 				// start looking for new message again
-				buffer_index_=0;
-				bytes_remaining_=0;
-				reading_acknowledgement_=false;
+				buffer_index_ = 0;
+				bytes_remaining_ = 0;
+				reading_acknowledgement_ = false;
 			} // end if (msg[i]==0x12)
-		} else if (buffer_index_==3) {	// number of bytes in header - not including sync
-			data_buffer_[buffer_index_++]=message[ii];
+		} else if (buffer_index_ == 3) {	// number of bytes in header - not including sync
+			data_buffer_[buffer_index_++] = message[ii];
 			// length of header is in byte 4
-			header_length_=message[ii];
-		} else if (buffer_index_==8) {	// set number of bytes
-			data_buffer_[buffer_index_++]=message[ii];
-			// length of message is in byte 8
-			// bytes remaining = remainder of header  + 4 byte checksum + length of body
-			// TODO: added a -2 to make things work right, figure out why i need this
-			bytes_remaining_=message[ii]+4+(header_length_-7)-2;
-		} else if (bytes_remaining_==1) {	// add last byte and parse
-			data_buffer_[buffer_index_++]=message[ii];
-			BINARY_LOG_TYPE message_id=(BINARY_LOG_TYPE)(((data_buffer_[5])<<8)+data_buffer_[4]);
+			header_length_ = message[ii];
+		} else if (buffer_index_ == 5) { // get message id
+			data_buffer_[buffer_index_++] = message[ii];
+			bytes_remaining_--;
+			message_id = BINARY_LOG_TYPE( ((data_buffer_[buffer_index_-1]) << 8) + data_buffer_[buffer_index_-2] );
+		// } else if (buffer_index_ == 8) {	// set number of bytes
+		// 	data_buffer_[buffer_index_++] = message[ii];
+		// 	// length of message is in byte 8
+		// 	// bytes remaining = remainder of header  + 4 byte checksum + length of body
+		// 	// TODO: added a -2 to make things work right, figure out why i need this
+		// 	bytes_remaining_ = message[ii] + 4 + (header_length_-7) - 2;
+		} else if (buffer_index_ == 9) {
+			data_buffer_[buffer_index_++] = message[ii];
+			bytes_remaining_ = (header_length_ - 10) + 4 + (data_buffer_[9] << 8) + data_buffer_[8];
+		} else if (bytes_remaining_ == 1) {	// add last byte and parse
+			data_buffer_[buffer_index_++] = message[ii];
+			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
+			// log_info_("Sending to ParseBinary");
 			ParseBinary(data_buffer_,buffer_index_-1,message_id);
 			// reset counters
-			buffer_index_=0;
-			bytes_remaining_=0;
+			buffer_index_ = 0;
+			bytes_remaining_ = 0;
 		} else {	// add data to buffer
-			data_buffer_[buffer_index_++]=message[ii];
+			data_buffer_[buffer_index_++] = message[ii];
 			bytes_remaining_--;
 		}
 	}	// end for
@@ -776,19 +785,28 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
-            // memset(&cmp_ranges, 0, sizeof(cmp_ranges));
-            // printf("Driver: Rangecmp: length = %i\n", length);
-            // printf("Driver: Rangecmp: sizeof = %i\n", sizeof(cmp_ranges));
-            // memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-            memcpy(&cmp_ranges, message, length);
-            if (compressed_range_measurements_callback_)
-            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+            // if (length>sizeof(cmp_ranges)) {
+	            printf("Driver: Rangecmp: length = %i\n", length);
+	            printf("Driver: Rangecmp: sizeof = %i\n", sizeof(cmp_ranges));
+	          // } else {
+	            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
+	            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
+	            printf("Driver: Rangecmp: copied to struct\n");
+	            // memcpy(&cmp_ranges, message, length);
+	            if (compressed_range_measurements_callback_)
+	            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+            // }
             break;
         case GPSEPHEMB_LOG_TYPE:
             GpsEphemeris ephemeris;
-            memcpy(&ephemeris, message, sizeof(ephemeris));
-            if (gps_ephemeris_callback_)
-            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            if (length>sizeof(ephemeris)) {
+	            printf("Driver: GpsEphemeris: length = %i\n", length);
+	            printf("Driver: GpsEphemeris: sizeof = %i\n", sizeof(ephemeris));
+	          } else {
+	            memcpy(&ephemeris, message, sizeof(ephemeris));
+	            if (gps_ephemeris_callback_)
+	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
+	          }
             break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
