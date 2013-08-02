@@ -332,7 +332,7 @@ public:
 
 
   void CompressedRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    ROS_INFO_STREAM("CompressedRangeHandler");
+    // ROS_INFO_STREAM("CompressedRangeHandler");
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = range.header.gps_millisecs;
@@ -341,8 +341,8 @@ public:
     // ROS_INFO_STREAM("Num Obs: " << range.number_of_observations);
     // cur_range_.num_obs = range.number_of_observations;
 
-    std::ofstream outfile;
-    outfile.open("/home/cerdec/convoy_ws/data/output.txt");
+    // std::ofstream outfile;
+    // outfile.open("/home/cerdec/convoy_ws/data/output.txt");
     // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
 
     for (int n=0; n<MAX_CHAN-1; n++) { //! FIXME how far should this iterate?
@@ -358,14 +358,14 @@ public:
         continue;
       }
       // printf("checked ");
-      outfile << "n = " << n << "\n";
-      outfile << "\tprn     = " << range.range_data[n].range_record.satellite_prn << "\n";
-      outfile << "\tpsr     = " << range.range_data[n].range_record.pseudorange/128. << "\n";
-      outfile << "\tpsr_std = " << range.range_data[n].range_record.pseudorange_standard_deviation << "\n";
-      outfile << "\tdoppler = " << range.range_data[n].range_record.doppler/256. << "\n";
-      outfile << "\tcno     = " << range.range_data[n].range_record.carrier_to_noise + 20. << "\n";
-      outfile << "\tadr     = " << range.range_data[n].range_record.accumulated_doppler/256. << "\n";
-      outfile << "\tadr_std = " << range.range_data[n].range_record.accumulated_doppler_std_deviation << "\n"; // << "\n"
+      // outfile << "n = " << n << "\n";
+      // outfile << "\tprn     = " << range.range_data[n].range_record.satellite_prn << "\n";
+      // outfile << "\tpsr     = " << range.range_data[n].range_record.pseudorange/128. << "\n";
+      // outfile << "\tpsr_std = " << range.range_data[n].range_record.pseudorange_standard_deviation << "\n";
+      // outfile << "\tdoppler = " << range.range_data[n].range_record.doppler/256. << "\n";
+      // outfile << "\tcno     = " << range.range_data[n].range_record.carrier_to_noise + 20. << "\n";
+      // outfile << "\tadr     = " << range.range_data[n].range_record.accumulated_doppler/256. << "\n";
+      // outfile << "\tadr_std = " << range.range_data[n].range_record.accumulated_doppler_std_deviation << "\n"; // << "\n"
       // printf("printed \n");
       uint8_t prn_idx = range.range_data[n].range_record.satellite_prn;
       switch (range.range_data[n].channel_status.signal_type) {
@@ -401,7 +401,7 @@ public:
       }
     }
     
-    outfile.close();
+    // outfile.close();
     
     cur_range_.L1.obs = L1_obs;
     cur_range_.L2.obs = L2_obs;

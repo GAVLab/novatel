@@ -785,22 +785,26 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case RANGECMPB_LOG_TYPE:
             CompressedRangeMeasurements cmp_ranges;
-            // if (length>sizeof(cmp_ranges)) {
-	            printf("Driver: Rangecmp: length = %i\n", length);
-	            printf("Driver: Rangecmp: sizeof = %i\n", sizeof(cmp_ranges));
-	          // } else {
-	            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
-	            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-	            printf("Driver: Rangecmp: copied to struct\n");
-	            // memcpy(&cmp_ranges, message, length);
-	            if (compressed_range_measurements_callback_)
-	            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
-            // }
+            if (length>sizeof(cmp_ranges)) {
+            	std::stringstream ss;
+            	ss << "Novatel Driver: Rangecmp mismatch:\n";
+            	ss << "\tmsg length = " << length << "\n";
+	            ss << "\tsizeof = " << sizeof(cmp_ranges);
+	            log_warning_(ss.str().c_str());
+	          }
+            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
+            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
+            printf("Driver: Rangecmp: copied to struct\n");
+            // memcpy(&cmp_ranges, message, length);
+            if (compressed_range_measurements_callback_)
+            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
             break;
         case GPSEPHEMB_LOG_TYPE:
             GpsEphemeris ephemeris;
             if (length>sizeof(ephemeris)) {
-	            printf("Driver: GpsEphemeris: length = %i\n", length);
+            	std::stringstream ss;
+            	ss << 
+	            log_warning_("Driver: GpsEphemeris: length = %i\n", length);
 	            printf("Driver: GpsEphemeris: sizeof = %i\n", sizeof(ephemeris));
 	          } else {
 	            memcpy(&ephemeris, message, sizeof(ephemeris));
