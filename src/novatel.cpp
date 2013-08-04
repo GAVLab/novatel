@@ -803,9 +803,10 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             GpsEphemeris ephemeris;
             if (length>sizeof(ephemeris)) {
             	std::stringstream ss;
-            	ss << 
-	            log_warning_("Driver: GpsEphemeris: length = %i\n", length);
-	            printf("Driver: GpsEphemeris: sizeof = %i\n", sizeof(ephemeris));
+            	ss << "Novatel Driver: GpsEphemeris mismatch\n";
+            	ss << "\tlength = " << length << "\n";
+	            ss << "\tsizeof msg = " << sizeof(ephemeris);
+	            log_warning_(ss.str().c_str());
 	          } else {
 	            memcpy(&ephemeris, message, sizeof(ephemeris));
 	            if (gps_ephemeris_callback_)
