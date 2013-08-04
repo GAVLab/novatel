@@ -794,7 +794,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	          }
             memset(&cmp_ranges, 0, sizeof(cmp_ranges));
             memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-            printf("Driver: Rangecmp: copied to struct\n");
             // memcpy(&cmp_ranges, message, length);
             if (compressed_range_measurements_callback_)
             	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
