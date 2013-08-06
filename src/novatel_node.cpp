@@ -339,13 +339,14 @@ public:
     uint8_t L1_obs = 0, L2_obs = 0;
     // uint8_t m1 = 0, m2=0; // m is output index (compress to front)
     // ROS_INFO_STREAM("Num Obs: " << range.number_of_observations);
-    // cur_range_.num_obs = range.number_of_observations;
+    cur_range_.num_obs = range.number_of_observations;
+    ROS_INFO_STREAM("Received numobs: " << range.number_of_observations);
 
     // std::ofstream outfile;
     // outfile.open("/home/cerdec/convoy_ws/data/output.txt");
     // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
 
-    for (int n=0; n<MAX_CHAN-1; n++) { //! FIXME how far should this iterate?
+    for (int n=0; n<range.number_of_observations; n++) { //! FIXME how far should this iterate?
       // printf("%i ",n);
       // make sure something on this index & it is a GPS constellation SV
       if (
@@ -355,6 +356,9 @@ public:
         )
       {
         // ROS_INFO_STREAM("Skipping PRN "<< std::hex << range.range_data[n].range_record.satellite_prn);
+        if (range.range_data[n].channel_status.satellite_sys != 0) {
+          ROS_INFO_STREAM("Received non-GPS satellite "<< range.range_data[n].channel_status.satellite_sys);
+        }
         continue;
       }
       // printf("checked ");

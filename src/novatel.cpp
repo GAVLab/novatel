@@ -26,6 +26,17 @@ double DefaultGetTime() {
 	return (double)(duration.total_milliseconds())/1000.0;
 }
 
+
+
+
+inline void printHex(char *data, int length) {
+  for (int i = 0; i < length; ++i) {
+    printf("0x%X ", (unsigned) (unsigned char) data[i]);
+  }
+  printf("\n");
+}
+
+
 // stolen from: http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
 void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
 	// Skip delimiters at beginning.
@@ -650,7 +661,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 			data_buffer_[buffer_index_++] = message[ii];
 			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
 			// log_info_("Sending to ParseBinary");
-			ParseBinary(data_buffer_,buffer_index_-1,message_id);
+			ParseBinary(data_buffer_, buffer_index_, message_id);
 			// reset counters
 			buffer_index_ = 0;
 			bytes_remaining_ = 0;
@@ -666,6 +677,11 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
     //stringstream output;
     //output << "Parsing Log: " << message_id << endl;
     //log_debug_(output.str());
+		uint16_t payload_length;
+		uint16_t header_length;
+
+		// obtain the received crc
+		// for (int)
 
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
@@ -783,22 +799,49 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             if (range_measurements_callback_)
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
-        case RANGECMPB_LOG_TYPE:
-            CompressedRangeMeasurements cmp_ranges;
-            if (length>sizeof(cmp_ranges)) {
-            	std::stringstream ss;
-            	ss << "Novatel Driver: Rangecmp mismatch:\n";
-            	ss << "\tmsg length = " << length << "\n";
-	            ss << "\tsizeof = " << sizeof(cmp_ranges);
-	            log_warning_(ss.str().c_str());
-	          }
-            memset(&cmp_ranges, 0, sizeof(cmp_ranges));
-            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-            // memcpy(&cmp_ranges, message, length);
-            if (compressed_range_measurements_callback_)
-            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
-            break;
-        case GPSEPHEMB_LOG_TYPE:
+        case RANGECMPB_LOG_TYPE: {
+	          CompressedRangeMeasurements cmp_ranges;
+	        	header_length = (uint16_t) *(message+3);
+	        	payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+	        	unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
+	        	
+	        	std::stringstream asdf;
+	        	asdf << "------\nheader_length: " << header_length << "\npayload_length: " << payload_length << "\n";
+	        	asdf << "length idx: " << length << "\nsizeof: " << sizeof(cmp_ranges) << "\n";
+	        	//asdf << "crc of received: " << crc_of_received << "\n";
+	        	log_info_(asdf.str().c_str()); asdf.str("");
+
+	        	//Copy header and unrepeated message block
+	        	memcpy(&cmp_ranges.header,message, header_length);
+	        	memcpy(&cmp_ranges.number_of_observations, message+header_length, 4);
+	        	// Copy Repeated portion of message block)
+	        	asdf << "\n PRN's : ";
+	        	for(int32_t index = 0; index < ((int32_t)*(message+header_length)); index++) { // Iterate number_of_observations times
+	        		memcpy(&cmp_ranges.range_data[index], message+header_length+4+(24*index), 24);
+	        		asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
+	        	}
+	        	log_info_(asdf.str().c_str()); asdf.str("");
+	        	// Copy the CRC
+	        	memcpy(&cmp_ranges.crc, message+header_length+payload_length, 4);
+	          
+
+	        	asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
+	        	asdf << "crc after shoving: " ;
+						log_info_(asdf.str().c_str()); asdf.str("");
+						printHex((char*)cmp_ranges.crc,4);
+	        	asdf << "\nMessage from BufferIncomingData\n";
+	        	log_info_(asdf.str().c_str()); asdf.str("");
+	        	printHex((char*)message,length);
+
+	        	
+	        	//printHex((char*)cmp_ranges.range_data[0],sizeof(24*((int32_t)*(message+header_length))));
+
+	            // memcpy(&cmp_ranges, message, length);
+	            if (compressed_range_measurements_callback_)
+		            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+	            break;
+          }
+        case GPSEPHEMB_LOG_TYPE: {
             GpsEphemeris ephemeris;
             if (length>sizeof(ephemeris)) {
             	std::stringstream ss;
@@ -812,6 +855,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
 	          }
             break;
+        }
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
             memcpy(&sat_pos, message, sizeof(sat_pos));

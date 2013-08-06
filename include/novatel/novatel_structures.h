@@ -699,9 +699,9 @@ struct RangeData {
  */
 struct RangeMeasurements {
     Oem4BinaryHeader header;            //!< Message header
-    long number_of_observations;     //!< Number of ranges observations in the following message
+    int32_t number_of_observations;     //!< Number of ranges observations in the following message
     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
-    uint32_t     crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+    uint8_t     crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
 };
 
 
@@ -754,9 +754,9 @@ struct CompressedRangeData {
 PACK(
 struct CompressedRangeMeasurements {
     Oem4BinaryHeader header;                        //!< Message header
-    uint32_t number_of_observations;                 //!< Number of ranges observations in the following message
+    int32_t number_of_observations;                 //!< Number of ranges observations in the following message
     CompressedRangeData range_data[MAX_CHAN];       //!< Range data for each available channel
-    char 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
+    uint8_t 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
 }//;
 );
 

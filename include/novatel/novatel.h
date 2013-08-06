@@ -42,6 +42,7 @@
 #include <string>
 #include <cstring> // for size_t
 
+#include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -53,7 +54,7 @@
 // Serial Headers
 #include "serial/serial.h"
 
-namespace novatel{
+namespace novatel {
 
 // used to convert lat and long to UTM coordinates
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
