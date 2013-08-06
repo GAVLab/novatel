@@ -803,35 +803,35 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	          CompressedRangeMeasurements cmp_ranges;
 	        	header_length = (uint16_t) *(message+3);
 	        	payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
-	        	unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
+	        	// unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
 	        	
-	        	std::stringstream asdf;
-	        	asdf << "------\nheader_length: " << header_length << "\npayload_length: " << payload_length << "\n";
-	        	asdf << "length idx: " << length << "\nsizeof: " << sizeof(cmp_ranges) << "\n";
+	        	// std::stringstream asdf;
+	        	// asdf << "------\nheader_length: " << header_length << "\npayload_length: " << payload_length << "\n";
+	        	// asdf << "length idx: " << length << "\nsizeof: " << sizeof(cmp_ranges) << "\n";
 	        	//asdf << "crc of received: " << crc_of_received << "\n";
-	        	log_info_(asdf.str().c_str()); asdf.str("");
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
 
 	        	//Copy header and unrepeated message block
 	        	memcpy(&cmp_ranges.header,message, header_length);
 	        	memcpy(&cmp_ranges.number_of_observations, message+header_length, 4);
 	        	// Copy Repeated portion of message block)
-	        	asdf << "\n PRN's : ";
+	        	// asdf << "\n PRN's : ";
 	        	for(int32_t index = 0; index < ((int32_t)*(message+header_length)); index++) { // Iterate number_of_observations times
 	        		memcpy(&cmp_ranges.range_data[index], message+header_length+4+(24*index), 24);
-	        		asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
+	        		// asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
 	        	}
-	        	log_info_(asdf.str().c_str()); asdf.str("");
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
 	        	// Copy the CRC
 	        	memcpy(&cmp_ranges.crc, message+header_length+payload_length, 4);
 	          
 
-	        	asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
-	        	asdf << "crc after shoving: " ;
-						log_info_(asdf.str().c_str()); asdf.str("");
-						printHex((char*)cmp_ranges.crc,4);
-	        	asdf << "\nMessage from BufferIncomingData\n";
-	        	log_info_(asdf.str().c_str()); asdf.str("");
-	        	printHex((char*)message,length);
+	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
+	        	// asdf << "crc after shoving: " ;
+						// log_info_(asdf.str().c_str()); asdf.str("");
+						// printHex((char*)cmp_ranges.crc,4);
+	        	// asdf << "\nMessage from BufferIncomingData\n";
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
+	        	// printHex((char*)message,length);
 
 	        	
 	        	//printHex((char*)cmp_ranges.range_data[0],sizeof(24*((int32_t)*(message+header_length))));
