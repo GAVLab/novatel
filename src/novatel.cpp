@@ -888,6 +888,8 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
     //stringstream output;
     //output << "Parsing Log: " << message_id << endl;
     //log_debug_(output.str());
+    uint16_t payload_length;
+    uint16_t header_length;
 
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
@@ -976,7 +978,18 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             break;
         case PSRDOPB_LOG_TYPE:
             Dop psr_dop;
-            memcpy(&psr_dop, message, sizeof(psr_dop));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated fields
+            memcpy(&psr_dop, message, header_length+24);
+            //Copy repeated fields
+            for(int32_t index = 0; index < psr_dop.number_of_prns; index++) { // Iterate number_of_prns times
+                memcpy(&psr_dop.prn[index], message+header_length+28+(4*index), 4);
+            }
+            //Copy CRC
+            memcpy(&psr_dop.crc, message+header_length+payload_length, 4);
+
             if (pseudorange_dop_callback_)
             	pseudorange_dop_callback_(psr_dop, read_timestamp_);
             break;
