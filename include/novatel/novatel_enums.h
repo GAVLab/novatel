@@ -307,16 +307,17 @@ enum PDPDynamics
 
 enum FRESET_TARGET
 {
-    STANDARD = 0,       //!< [DEFAULT] Clears commands, ephemeris, and almanac
-    COMMAND = 1,        //!< Clears saved configuration
-    GPSALMANAC = 2,     //!< Clears stored GPS almanac
-    GPSEPHEM = 3,       //!< Clears stored GPS ephemeris
-    GLOEPHEM = 4,       //!< Clears stored GLONASS ephemeris
-    MODEL = 5,          //!< Clears the currently selected model
-    CLKCALIBRATION = 11,//!< Clears parameters entered using CLOCKCALIBRATE command
-    SBASALMANAC = 20,   //!< Clears stored SBAS almanac
-    LAST_POSITION = 21, //!< Resets the position using the last stored position
-    GLOALMANAC = 31,    //!< Clears the stored GLONASS almanac
+    STANDARD = 0,           //!< [DEFAULT] Clears commands, ephemeris, and almanac
+    COMMAND = 1,            //!< Clears saved configuration
+    GPSALMANAC = 2,         //!< Clears stored GPS almanac
+    GPSEPHEM = 3,           //!< Clears stored GPS ephemeris
+    GLOEPHEM = 4,           //!< Clears stored GLONASS ephemeris
+    MODEL = 5,              //!< Clears the currently selected model
+    CLKCALIBRATION = 11,    //!< Clears parameters entered using CLOCKCALIBRATE command
+    SBASALMANAC = 20,       //!< Clears stored SBAS almanac
+    LAST_POSITION = 21,     //!< Resets the position using the last stored position
+    GLOALMANAC = 31,        //!< Clears the stored GLONASS almanac
+    LBAND_TCXO_OFFSET = 38, //!< Removes the TCXO offset information from NVM (not in OEMStar firmware)
 };
 
 enum BINARY_LOG_TYPE

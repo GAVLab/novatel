@@ -288,7 +288,7 @@ bool Novatel::SendCommand(std::string cmd_msg) {
 	}
 }
 
-bool Novatel::SetSvElevationAngleCutoff(uint8_t angle) {
+bool Novatel::SetSvElevationAngleCutoff(float angle) {
     try {
         std::stringstream ang_cmd;
         ang_cmd << "ECUTOFF " << angle;
@@ -377,11 +377,25 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     return SendCommand(time_cmd.str());
 }
 
-bool Novatel::SetL1CarrierSmoothing(uint32_t time_constant) { //!< 2<= time constant <= 2000 [sec]
-    std::stringstream smooth_cmd;
-    smooth_cmd << "CSMOOTH " << time_constant;
-    return SendCommand(smooth_cmd.str());
-
+bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant) {
+    try {
+        std::stringstream smooth_cmd;
+        if (2 < l1_time_constant < 2000) {
+            log_error_("Error in SetL1CarrierSmoothing: l1_time_constant set to improper value.");
+            return false;
+        } else if (5 < l2_time_constant < 2000) {
+            log_error_("Error in SetL1CarrierSmoothing: l2_time_constant set to improper value.");
+            return false;
+        } else {
+            smooth_cmd << "CSMOOTH " << l1_time_constant << " " << l2_time_constant;
+        }
+        return SendCommand(smooth_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetCarrierSmoothing(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
 }
 
 bool Novatel::HardwareReset(uint8_t rst_delay) {
@@ -413,9 +427,13 @@ bool Novatel::HotStartReset() {
 
 bool Novatel::WarmStartReset() {
     try {
-        std::stringstream rst_cmd;
-        rst_cmd << "FRESET " << LAST_POSITION;
-        return SendCommand(rst_cmd.str());
+        std::stringstream rst_pos_cmd;
+        std::stringstream rst_time_cmd;
+        rst_pos_cmd << "FRESET " << LAST_POSITION;
+        bool pos_reset = SendCommand(rst_pos_cmd.str());
+        rst_time_cmd << "FRESET " << LBAND_TCXO_OFFSET ;
+        bool time_reset = SendCommand(rst_time_cmd.str());
+        return (pos_reset && time_reset);
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::WarmStartReset(): " << e.what();

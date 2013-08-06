@@ -191,8 +191,9 @@ public:
      * are not automatically searched for and are not used
      * in the position calculation. Angles < 5 deg are not
      * recommended except in specific situations
+     * (Angle = +-90 deg)
      */
-    bool SetSvElevationAngleCutoff(uint8_t angle = 5.0);
+    bool SetSvElevationAngleCutoff(float angle);
 
     /*!
      * Pseudrange/Delta-Phase filter (PDPFILTER)- smooths positions
@@ -214,7 +215,14 @@ public:
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
 
-    bool SetL1CarrierSmoothing(uint32_t time_constant); //!< 2<= time constant <= 2000 [sec]
+    /*!
+     * SetL1CarrierSmoothing sets the amount of smoothing to be performed on
+     * code measurements. L2 smoothing is available in OEMV receivers, but
+     * NOT in OEMStar Firmaware receivers.
+     *      l1_time_constant : 2<= time constant <= 2000 [sec]
+     *      l2_time_constant : 5<= time constant <= 2000 [sec] (firmware default = 100)
+     */
+    bool SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant);
 
     bool HardwareReset(uint8_t rst_delay=0);
     /*!
