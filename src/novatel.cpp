@@ -1082,7 +1082,18 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
-            memcpy(&sat_pos, message, sizeof(sat_pos));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&sat_pos, message, header_length+12);
+            //Copy repeated fields
+            for(uint32_t index = 0; index < sat_pos.number_of_satellites; index++) {
+                memcpy(&sat_pos.data[index], message+header_length+12+(68*index), 68);
+            }
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
             if (satellite_positions_callback_)
             	satellite_positions_callback_(sat_pos, read_timestamp_);
             break;
