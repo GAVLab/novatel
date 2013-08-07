@@ -1099,7 +1099,18 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case SATVISB_LOG_TYPE:
             SatelliteVisibility sat_vis;
-            memcpy(&sat_vis, message, sizeof(sat_vis));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&sat_pos, message, header_length+12);
+            //Copy repeated fields
+            for(uint32_t index = 0; index < sat_vis.number_of_satellites; index++) {
+                memcpy(&sat_vis.data[index], message+header_length+12+(40*index), 40);
+            }
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
             if(satellite_visibility_callback_)
                 satellite_visibility_callback_(sat_vis, read_timestamp_);
             break;
@@ -1111,7 +1122,18 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case TRACKSTATB_LOG_TYPE:
             TrackStatus tracking_status;
-            memcpy(&tracking_status, message, sizeof(tracking_status));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&tracking_status, message, header_length+16);
+            //Copy repeated fields
+            for(int32_t index = 0; index < tracking_status.number_of_channels; index++) {
+                memcpy(&tracking_status.data[index], message+header_length+16+(40*index), 40);
+            }
+            //Copy CRC
+            memcpy(&tracking_status.crc, message+header_length+payload_length, 4);
+
             if(tracking_status_callback_)
                 tracking_status_callback_(tracking_status, read_timestamp_);
             break;
