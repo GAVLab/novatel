@@ -381,7 +381,7 @@ public:
           cur_range_.L1.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
           cur_range_.L1.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
           cur_range_.L1.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L1.carrier.phase[prn_idx] = range.range_data[n].range_record.accumulated_doppler/256.;
+          cur_range_.L1.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.;
           cur_range_.L1.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L1_obs++;
           // m1++;
@@ -394,7 +394,7 @@ public:
           cur_range_.L2.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
           cur_range_.L2.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
           cur_range_.L2.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L2.carrier.phase[prn_idx] = range.range_data[n].range_record.accumulated_doppler/256.;
+          cur_range_.L2.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.;
           cur_range_.L2.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L2_obs++;
           // m2++;
