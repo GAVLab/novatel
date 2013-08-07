@@ -1013,7 +1013,18 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             break;
         case RANGEB_LOG_TYPE:
             RangeMeasurements ranges;
-            memcpy(&ranges, message, sizeof(ranges));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and #observations following
+            memcpy(&ranges, message, header_length+4);
+            //Copy repeated fields
+            for(int32_t index = 0; index < ranges.number_of_observations; index++) {
+                memcpy(&ranges.range_data[index], message+header_length+4+(44*index), 44);
+            }
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
             if (range_measurements_callback_)
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
