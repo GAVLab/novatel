@@ -17,7 +17,7 @@ if (BUILD_WITH_ROS)
 	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 	## is used, also find other catkin packages
 	## libraries found here are added to catkin_LIBRARIES and linked automatically
-	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
+	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf gps_msgs)
 
 
 
@@ -27,7 +27,7 @@ if (BUILD_WITH_ROS)
 	catkin_package(
 	  INCLUDE_DIRS include
 	  LIBRARIES novatel
-	  CATKIN_DEPENDS serial roslib roscpp rosconsole
+	  CATKIN_DEPENDS serial roslib roscpp rosconsole gps_msgs
 	  DEPENDS Boost
 	)
 else()
