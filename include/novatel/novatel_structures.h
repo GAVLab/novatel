@@ -759,6 +759,7 @@ struct GpsEphemeris
  * RAWEPHEM Message Structure
  * contains the raw binary information for subframes one, two
  * and three from the satellite with the parity information removed.
+ * Ephemeris older than 6 hours is not output
  */
 PACK(
 struct Word {
