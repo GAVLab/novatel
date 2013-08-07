@@ -973,9 +973,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy header and unrepeated fields
             memcpy(&psr_dop, message, header_length+24);
             //Copy repeated fields
-            for(int32_t index = 0; index < psr_dop.number_of_prns; index++) { // Iterate number_of_prns times
-                memcpy(&psr_dop.prn[index], message+header_length+28+(4*index), 4);
-            }
+            memcpy(&psr_dop.prn, message+header_length+28, (4*psr_dop.number_of_prns));
             //Copy CRC
             memcpy(&psr_dop.crc, message+header_length+payload_length, 4);
 
@@ -1008,9 +1006,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy header and #observations following
             memcpy(&ranges, message, header_length+4);
             //Copy repeated fields
-            for(int32_t index = 0; index < ranges.number_of_observations; index++) {
-                memcpy(&ranges.range_data[index], message+header_length+4+(44*index), 44);
-            }
+            memcpy(&ranges.range_data, message+header_length+4, (44*ranges.number_of_observations));
             //Copy CRC
             memcpy(&ranges.crc, message+header_length+payload_length, 4);
 
@@ -1033,12 +1029,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	memcpy(&cmp_ranges.header,message, header_length);
 	        	memcpy(&cmp_ranges.number_of_observations, message+header_length, 4);
 	        	// Copy Repeated portion of message block)
-	        	// asdf << "\n PRN's : ";
-	        	for(int32_t index = 0; index < ((int32_t)*(message+header_length)); index++) { // Iterate number_of_observations times
-	        		memcpy(&cmp_ranges.range_data[index], message+header_length+4+(24*index), 24);
-	        		// asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
-	        	}
-	        	// log_info_(asdf.str().c_str()); asdf.str("");
+                memcpy(&cmp_ranges.range_data, message+header_length+4, (24*cmp_ranges.number_of_observations));
 	        	// Copy the CRC
 	        	memcpy(&cmp_ranges.crc, message+header_length+payload_length, 4);
 	          
@@ -1088,9 +1079,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy header and unrepeated part of message
             memcpy(&sat_pos, message, header_length+12);
             //Copy repeated fields
-            for(uint32_t index = 0; index < sat_pos.number_of_satellites; index++) {
-                memcpy(&sat_pos.data[index], message+header_length+12+(68*index), 68);
-            }
+            memcpy(&sat_pos.data, message+header_length+12, (68*sat_pos.number_of_satellites));
             //Copy CRC
             memcpy(&ranges.crc, message+header_length+payload_length, 4);
 
@@ -1105,9 +1094,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy header and unrepeated part of message
             memcpy(&sat_pos, message, header_length+12);
             //Copy repeated fields
-            for(uint32_t index = 0; index < sat_vis.number_of_satellites; index++) {
-                memcpy(&sat_vis.data[index], message+header_length+12+(40*index), 40);
-            }
+            memcpy(&sat_vis.data, message+header_length+12, (40*sat_vis.number_of_satellites));
             //Copy CRC
             memcpy(&ranges.crc, message+header_length+payload_length, 4);
 
@@ -1128,9 +1115,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy header and unrepeated part of message
             memcpy(&tracking_status, message, header_length+16);
             //Copy repeated fields
-            for(int32_t index = 0; index < tracking_status.number_of_channels; index++) {
-                memcpy(&tracking_status.data[index], message+header_length+16+(40*index), 40);
-            }
+            memcpy(&tracking_status.data, message+header_length+16, (40*tracking_status.number_of_channels));
             //Copy CRC
             memcpy(&tracking_status.crc, message+header_length+payload_length, 4);
 
