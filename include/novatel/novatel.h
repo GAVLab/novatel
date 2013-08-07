@@ -42,6 +42,7 @@
 #include <string>
 #include <cstring> // for size_t
 
+#include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -53,7 +54,7 @@
 // Serial Headers
 #include "serial/serial.h"
 
-namespace novatel{
+namespace novatel {
 
 // used to convert lat and long to UTM coordinates
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
@@ -63,6 +64,7 @@ typedef boost::function<void()> HandleAcknowledgementCallback;
 
 // Messaging callbacks
 typedef boost::function<void(const std::string&)> LogMsgCallback;
+typedef boost::function<void(unsigned char *)> RawMsgCallback;
 
 // INS Specific Callbacks
 typedef boost::function<void(InsPositionVelocityAttitude&, double&)> InsPositionVelocityAttitudeCallback;
@@ -256,7 +258,6 @@ public:
 
     bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
 
-
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
@@ -317,6 +318,9 @@ public:
     void set_rtk_position_callback(RtkPositionCallback handler){
         rtk_position_callback_=handler;};
 
+    void set_raw_msg_callback(RawMsgCallback handler) {
+        raw_msg_callback_=handler;};
+
 private:
 
   bool Connect_(std::string port, int baudrate);
@@ -354,7 +358,7 @@ private:
 	/*!
 	 * Parses a packet of data from the GPS.  The
 	 */
-	void ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id);
+	void ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
 
@@ -383,6 +387,8 @@ private:
     //////////////////////////////////////////////////////
     // New Data Callbacks
     //////////////////////////////////////////////////////
+    RawMsgCallback raw_msg_callback_;
+
     BestGpsPositionCallback best_gps_position_callback_;
     BestLeverArmCallback best_lever_arm_callback_;
     BestPositionCallback best_position_callback_;

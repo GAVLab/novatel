@@ -1,5 +1,6 @@
 #include "novatel/novatel.h"
 #include <iostream>
+#include <valarray>
 #include <fstream>
 #include <sstream>
 using namespace std;
@@ -24,6 +25,17 @@ double DefaultGetTime() {
 	boost::posix_time::time_duration duration(present_time.time_of_day());
 	return (double)(duration.total_milliseconds())/1000.0;
 }
+
+
+
+
+inline void printHex(char *data, int length) {
+  for (int i = 0; i < length; ++i) {
+    printf("0x%X ", (unsigned) (unsigned char) data[i]);
+  }
+  printf("\n");
+}
+
 
 // stolen from: http://oopweb.com/CPP/Documents/CPPHOWTO/Volume/C++Programming-HOWTO-7.html
 void Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
@@ -274,10 +286,10 @@ bool Novatel::SendCommand(std::string cmd_msg) {
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
 		if (ack_condition_.timed_wait(lock,timeout)) {
-            log_info_("Command " + cmd_msg + "sent to GPS receiver.");
+      log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
 			return true;
 		} else {
-            log_error_("Command " + cmd_msg + "failed.");
+      log_error_("Command " + cmd_msg + "failed.");
 			return false;
 		}
 	} catch (std::exception &e) {
@@ -775,121 +787,98 @@ void Novatel::ReadSerialPort() {
 
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
-
+	BINARY_LOG_TYPE message_id;
 	// add incoming data to buffer
-	for (unsigned int ii=0; ii<length; ii++)
-	{
+	for (unsigned int ii=0; ii<length; ii++) {
 		// make sure bufIndex is not larger than buffer
-		if (buffer_index_>=MAX_NOUT_SIZE)
-		{
+		if (buffer_index_ >= MAX_NOUT_SIZE) {
 			buffer_index_=0;
             log_warning_("Overflowed receive buffer. Buffer cleared.");
 		}
 
-		if (buffer_index_==0)
-		{	// looking for beginning of message
-			if (message[ii]==0xAA)
-			{	// beginning of msg found - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-				bytes_remaining_=0;
-			}	// end if (msg[ii]
-			else if (message[ii]=='<')
-			{
+		if (buffer_index_ == 0) {	// looking for beginning of message
+			if (message[ii] == 0xAA) {	// beginning of msg found - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+				bytes_remaining_ = 0;
+			} else if (message[ii] == '<') {
 				// received beginning of acknowledgement
-				reading_acknowledgement_=true;
-				buffer_index_=1;
+				reading_acknowledgement_ = true;
+				buffer_index_ = 1;
+			} else {
+        //log_debug_("BufferIncomingData::Received unknown data.");
 			}
-			else
-			{
-                ;//log_debug_("BufferIncomingData::Received unknown data.");
-			}
-		} // end if (bufIndex==0)
-		else if (buffer_index_==1)
-		{	// verify 2nd character of header
-			if (message[ii]==0x44)
-			{	// 2nd byte ok - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-			}
-			else if ((message[ii]=='O')&&reading_acknowledgement_)
-			{
+		} else if (buffer_index_ == 1) {	// verify 2nd character of header
+			if (message[ii] == 0x44) {	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+			} else if ( (message[ii] == 'O') && reading_acknowledgement_ ) {
 				// 2nd byte of acknowledgement
-				buffer_index_=2;
-			}
-			else
-			{
+				buffer_index_ = 2;
+			} else {
 				// start looking for new message again
-				buffer_index_=0;
+				buffer_index_ = 0;
 				bytes_remaining_=0;
 				reading_acknowledgement_=false;
 			} // end if (msg[i]==0x44)
-		}	// end else if (bufIndex==1)
-		else if (buffer_index_==2)
-		{	// verify 3rd character of header
-			if (message[ii]==0x12)
-			{	// 2nd byte ok - add to buffer
-				data_buffer_[buffer_index_++]=message[ii];
-			}
-			else if ((message[ii]=='K')&&(reading_acknowledgement_))
-			{
+		} else if (buffer_index_ == 2) {	// verify 3rd character of header
+			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
+				data_buffer_[buffer_index_++] = message[ii];
+			} else if ( (message[ii] == 'K') && (reading_acknowledgement_) ) {
 				// final byte of acknowledgement received
-				buffer_index_=0;
-				reading_acknowledgement_=false;
-
-				{
-					boost::lock_guard<boost::mutex> lock(ack_mutex_);
-					ack_received_=true;
-				}
+				buffer_index_ = 0;
+				reading_acknowledgement_ = false;
+				boost::lock_guard<boost::mutex> lock(ack_mutex_);
+				ack_received_ = true;
 				ack_condition_.notify_all();
 
 				// ACK received
 				handle_acknowledgement_();
-			}
-			else
-			{
+			} else {
 				// start looking for new message again
-				buffer_index_=0;
-				bytes_remaining_=0;
-				reading_acknowledgement_=false;
+				buffer_index_ = 0;
+				bytes_remaining_ = 0;
+				reading_acknowledgement_ = false;
 			} // end if (msg[i]==0x12)
-		}	// end else if (bufIndex==2)
-		else if (buffer_index_==3)
-		{	// number of bytes in header - not including sync
-			data_buffer_[buffer_index_++]=message[ii];
+		} else if (buffer_index_ == 3) {	// number of bytes in header - not including sync
+			data_buffer_[buffer_index_++] = message[ii];
 			// length of header is in byte 4
-			header_length_=message[ii];
-		}
-		else if (buffer_index_==8)
-		{	// set number of bytes
-			data_buffer_[buffer_index_++]=message[ii];
-			// length of message is in byte 8
-			// bytes remaining = remainder of header  + 4 byte checksum + length of body
-			// TODO: added a -2 to make things work right, figure out why i need this
-			bytes_remaining_=message[ii]+4+(header_length_-7)-2;
-		}
-		else if (bytes_remaining_==1)
-		{	// add last byte and parse
-			data_buffer_[buffer_index_++]=message[ii];
-			BINARY_LOG_TYPE message_id=(BINARY_LOG_TYPE)(((data_buffer_[5])<<8)+data_buffer_[4]);
-			ParseBinary(data_buffer_,message_id);
+			header_length_ = message[ii];
+		} else if (buffer_index_ == 5) { // get message id
+			data_buffer_[buffer_index_++] = message[ii];
+			bytes_remaining_--;
+			message_id = BINARY_LOG_TYPE( ((data_buffer_[buffer_index_-1]) << 8) + data_buffer_[buffer_index_-2] );
+		// } else if (buffer_index_ == 8) {	// set number of bytes
+		// 	data_buffer_[buffer_index_++] = message[ii];
+		// 	// length of message is in byte 8
+		// 	// bytes remaining = remainder of header  + 4 byte checksum + length of body
+		// 	// TODO: added a -2 to make things work right, figure out why i need this
+		// 	bytes_remaining_ = message[ii] + 4 + (header_length_-7) - 2;
+		} else if (buffer_index_ == 9) {
+			data_buffer_[buffer_index_++] = message[ii];
+			bytes_remaining_ = (header_length_ - 10) + 4 + (data_buffer_[9] << 8) + data_buffer_[8];
+		} else if (bytes_remaining_ == 1) {	// add last byte and parse
+			data_buffer_[buffer_index_++] = message[ii];
+			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
+			// log_info_("Sending to ParseBinary");
+			ParseBinary(data_buffer_, buffer_index_, message_id);
 			// reset counters
-			buffer_index_=0;
-			bytes_remaining_=0;
-		}  // end else if (bytesRemaining==1)
-		else
-		{	// add data to buffer
-			data_buffer_[buffer_index_++]=message[ii];
+			buffer_index_ = 0;
+			bytes_remaining_ = 0;
+		} else {	// add data to buffer
+			data_buffer_[buffer_index_++] = message[ii];
 			bytes_remaining_--;
 		}
 	}	// end for
 }
 
-void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
-{
+void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id) {
     //stringstream output;
     //output << "Parsing Log: " << message_id << endl;
     //log_debug_(output.str());
-    uint16_t payload_length;
-    uint16_t header_length;
+		uint16_t payload_length;
+		uint16_t header_length;
+
+		// obtain the received crc
+		// for (int)
 
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
@@ -1028,18 +1017,63 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
             if (range_measurements_callback_)
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
-        case RANGECMPB_LOG_TYPE:
-            CompressedRangeMeasurements cmp_ranges;
-            memcpy(&cmp_ranges, message, sizeof(cmp_ranges));
-            if (compressed_range_measurements_callback_)
-            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
-            break;
-        case GPSEPHEMB_LOG_TYPE:
+        case RANGECMPB_LOG_TYPE: {
+	          CompressedRangeMeasurements cmp_ranges;
+	        	header_length = (uint16_t) *(message+3);
+	        	payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+	        	// unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
+	        	
+	        	// std::stringstream asdf;
+	        	// asdf << "------\nheader_length: " << header_length << "\npayload_length: " << payload_length << "\n";
+	        	// asdf << "length idx: " << length << "\nsizeof: " << sizeof(cmp_ranges) << "\n";
+	        	//asdf << "crc of received: " << crc_of_received << "\n";
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
+
+	        	//Copy header and unrepeated message block
+	        	memcpy(&cmp_ranges.header,message, header_length);
+	        	memcpy(&cmp_ranges.number_of_observations, message+header_length, 4);
+	        	// Copy Repeated portion of message block)
+	        	// asdf << "\n PRN's : ";
+	        	for(int32_t index = 0; index < ((int32_t)*(message+header_length)); index++) { // Iterate number_of_observations times
+	        		memcpy(&cmp_ranges.range_data[index], message+header_length+4+(24*index), 24);
+	        		// asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
+	        	}
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
+	        	// Copy the CRC
+	        	memcpy(&cmp_ranges.crc, message+header_length+payload_length, 4);
+	          
+
+	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
+	        	// asdf << "crc after shoving: " ;
+						// log_info_(asdf.str().c_str()); asdf.str("");
+						// printHex((char*)cmp_ranges.crc,4);
+	        	// asdf << "\nMessage from BufferIncomingData\n";
+	        	// log_info_(asdf.str().c_str()); asdf.str("");
+	        	// printHex((char*)message,length);
+
+	        	
+	        	//printHex((char*)cmp_ranges.range_data[0],sizeof(24*((int32_t)*(message+header_length))));
+
+	            // memcpy(&cmp_ranges, message, length);
+	            if (compressed_range_measurements_callback_)
+		            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+	            break;
+          }
+        case GPSEPHEMB_LOG_TYPE: {
             GpsEphemeris ephemeris;
-            memcpy(&ephemeris, message, sizeof(ephemeris));
-            if (gps_ephemeris_callback_)
-            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            if (length>sizeof(ephemeris)) {
+            	std::stringstream ss;
+            	ss << "Novatel Driver: GpsEphemeris mismatch\n";
+            	ss << "\tlength = " << length << "\n";
+	            ss << "\tsizeof msg = " << sizeof(ephemeris);
+	            log_warning_(ss.str().c_str());
+	          } else {
+	            memcpy(&ephemeris, message, sizeof(ephemeris));
+	            if (gps_ephemeris_callback_)
+	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
+	          }
             break;
+        }
         case RAWEPHEMB_LOG_TYPE:
             RawEphemeris raw_ephemeris;
             memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
@@ -1091,8 +1125,6 @@ void Novatel::ParseBinary(unsigned char *message, BINARY_LOG_TYPE message_id)
         default:
             break;
     }
-
-
 }
 
 // this functions matches the conversion done by the Novatel receivers

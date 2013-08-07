@@ -1,9 +1,10 @@
 #include <iostream>
 #include <fstream>
+// #include <ifstream>
 #include "gtest/gtest.h"
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
-#include <string_utils/string_utils.h>
+// #include <string_utils/string_utils.h>
 
 // OMG this is so nasty...
 #define private public
@@ -186,7 +187,7 @@ TEST(DataParsing, BinaryDataSet1) {
     // load data file and pass through parse methods
     std::ifstream test_datafile;
     test_datafile.open("./"
-            "test_data/OneEach.GPS",ios::in|ios::binary);
+            "test_data/OneEach.GPS",std::ios::in|std::ios::binary);
 
     if (test_datafile.is_open()) {
         // read data from the file and pass to the novatel parse methods
