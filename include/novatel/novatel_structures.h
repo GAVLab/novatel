@@ -40,6 +40,7 @@
 
 #include "novatel_enums.h"
 #include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
 
 namespace novatel {
 
@@ -66,7 +67,7 @@ namespace novatel {
 	#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
 #endif
 
-#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
 
 
 //*******************************************************************************
