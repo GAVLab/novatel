@@ -35,38 +35,9 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    my_gps.SetSvElevationAngleCutoff(5);
-//    my_gps.PDPFilterDisable();
-    my_gps.PDPFilterEnable();
-//    my_gps.PDPFilterReset();
-//    my_gps.PDPModeConfigure(NORMAL,AUTO);
-    my_gps.SetCarrierSmoothing(9,9);
-
-    //    my_gps.SendCommand("PASSTOPASSMODE ENABLE ON OFF");
-    /*
-    my_gps.HardwareReset(0);
-    my_gps.HotStartReset();
-    my_gps.WarmStartReset();
-    my_gps.ColdStartReset();
-
-    my_gps.SaveConfiguration();
-    my_gps.Unlog("BESTUTMB");
-    my_gps.UnlogAll();
-    */
-
-//    my_gps.SetInitialPosition();
-//    my_gps.SetInitialTime();
-
-
-
-
-
-
-
     //while(1);
 
     my_gps.Disconnect();
-    std::cout << "Disconnected." << endl;
 
     return 0;
 }

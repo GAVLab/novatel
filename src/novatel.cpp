@@ -289,7 +289,7 @@ bool Novatel::SendCommand(std::string cmd_msg) {
       log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
 			return true;
 		} else {
-            log_error_("Command '" + cmd_msg + "' failed.");
+      log_error_("Command " + cmd_msg + "failed.");
 			return false;
 		}
 	} catch (std::exception &e) {
@@ -316,7 +316,7 @@ bool Novatel::SetSvElevationAngleCutoff(float angle) {
 void Novatel::PDPFilterDisable() {
     try{
     std::stringstream pdp_cmd;
-    pdp_cmd << "PDPFILTER DISABLE" ;
+    pdp_cmd << "PDPFILTER " << DISABLE;
     bool result = SendCommand(pdp_cmd.str());
     } catch (std::exception &e) {
         std::stringstream output;
@@ -328,7 +328,7 @@ void Novatel::PDPFilterDisable() {
 void Novatel::PDPFilterEnable() {
     try{
     std::stringstream pdp_cmd;
-    pdp_cmd << "PDPFILTER ENABLE" ;
+    pdp_cmd << "PDPFILTER " << ENABLE;
     bool result = SendCommand(pdp_cmd.str());
     } catch (std::exception &e) {
         std::stringstream output;
@@ -340,7 +340,7 @@ void Novatel::PDPFilterEnable() {
 void Novatel::PDPFilterReset() {
     try{
     std::stringstream pdp_cmd;
-    pdp_cmd << "PDPFILTER RESET";
+    pdp_cmd << "PDPFILTER " << RESET;
     bool result = SendCommand(pdp_cmd.str());
     } catch (std::exception &e) {
         std::stringstream output;
@@ -349,31 +349,10 @@ void Novatel::PDPFilterReset() {
     }
 }
 
-//! TODO: PROPAK DOESN"T ACCEPT, LIKES REV.1 PASSTOPASSMODE INSTEAD
 void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
     try {
         std::stringstream pdp_cmd;
-
-        pdp_cmd << "PDPMODE ";
-        if (mode == NORMAL)
-            pdp_cmd << "NORMAL ";
-        else if (mode == RELATIVE)
-            pdp_cmd << "RELATIVE ";
-        else {
-            log_error_("PDPModeConfigure() input 'mode'' is not valid!");
-            return;
-        }
-        if (dynamics == AUTO)
-            pdp_cmd << "AUTO";
-        else if (dynamics == STATIC)
-            pdp_cmd << "STATIC";
-        else if (dynamics == DYNAMIC)
-            pdp_cmd << "DYNAMIC";
-        else {
-            log_error_("PDPModeConfigure() input 'dynamics' is not valid!");
-            return;
-        }
-
+        pdp_cmd << "PDPMODE " << mode << " " << dynamics;
         bool result = SendCommand(pdp_cmd.str());
     } catch (std::exception &e) {
         std::stringstream output;
@@ -413,11 +392,11 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
 bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant) {
     try {
         std::stringstream smooth_cmd;
-        if ((2 >= l1_time_constant) || (l1_time_constant >= 2000)) {
-            log_error_("Error in SetCarrierSmoothing: l1_time_constant set to improper value.");
+        if (2 < l1_time_constant < 2000) {
+            log_error_("Error in SetL1CarrierSmoothing: l1_time_constant set to improper value.");
             return false;
-        } else if ((5 >= l2_time_constant) || (l2_time_constant >= 2000)) {
-            log_error_("Error in SetCarrierSmoothing: l2_time_constant set to improper value.");
+        } else if (5 < l2_time_constant < 2000) {
+            log_error_("Error in SetL1CarrierSmoothing: l2_time_constant set to improper value.");
             return false;
         } else {
             smooth_cmd << "CSMOOTH " << l1_time_constant << " " << l2_time_constant;

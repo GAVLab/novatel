@@ -42,7 +42,7 @@
 #include <string>
 #include <cstring> // for size_t
 
-//#include "novatel/generate_crc.hpp"
+#include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
