@@ -1,5 +1,7 @@
 Novatel GPS Driver
 ==================
+  
+***___DO NOT USE THIS BRANCH. IT IS BEING DEPRECATED.___***  
 
 This project provides a cross-platform interface for the Novatel OEM4 and OEMV series of GPS receivers.  The Novatel SPAN system is also supported. 
 
