@@ -304,7 +304,7 @@ public:
     uint8_t n = ephem.prn; // how drtk expects it
     cur_ephem_.prn[n] = ephem.prn;
     cur_ephem_.health[n] = ephem.health;
-    cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis;
+    cur_ephem_.semimajor_axis[n] = ephem.semi_major_axis; // this value is A, not the sqrt of A
     cur_ephem_.mean_anomaly[n] = ephem.anomoly_reference_time;
     cur_ephem_.eccentricity[n] = ephem.eccentricity;
     cur_ephem_.perigee_arg[n] = ephem.omega;
@@ -381,7 +381,7 @@ public:
           cur_range_.L1.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
           cur_range_.L1.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
           cur_range_.L1.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L1.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.;
+          cur_range_.L1.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.; // negative sign is critical!!!
           cur_range_.L1.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L1_obs++;
           // m1++;
@@ -394,7 +394,7 @@ public:
           cur_range_.L2.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
           cur_range_.L2.carrier.doppler[prn_idx] = range.range_data[n].range_record.doppler/256.;
           cur_range_.L2.carrier.noise[prn_idx] = range.range_data[n].range_record.carrier_to_noise + 20.;
-          cur_range_.L2.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.;
+          cur_range_.L2.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.; // negative sign is critical!!!
           cur_range_.L2.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L2_obs++;
           // m2++;
