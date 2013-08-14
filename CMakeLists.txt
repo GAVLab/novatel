@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(novatel)
 
+## Find catkin macros and libraries
+	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
+	## is used, also find other catkin packages
+	## libraries found here are added to catkin_LIBRARIES and linked automatically
+	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf gps_msgs)
 
 #######################################
 ## Check for ROS ##
@@ -13,14 +18,6 @@ if (NOT catkin_FOUND)
 endif(NOT catkin_FOUND)
 
 if (BUILD_WITH_ROS)
-	## Find catkin macros and libraries
-	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-	## is used, also find other catkin packages
-	## libraries found here are added to catkin_LIBRARIES and linked automatically
-	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf gps_msgs)
-
-
-
 	## LIBRARIES: libraries you create in this project that dependent projects also need
 	## CATKIN_DEPENDS: catkin_packages dependent projects also need
 	## DEPENDS: system dependencies of this project that dependent projects also need
