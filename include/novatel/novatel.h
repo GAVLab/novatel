@@ -42,7 +42,6 @@
 #include <string>
 #include <cstring> // for size_t
 
-#include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -58,6 +57,7 @@ namespace novatel {
 
 // used to convert lat and long to UTM coordinates
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
+#define CRC32_POLYNOMIAL 0xEDB88320L
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -186,6 +186,7 @@ public:
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
     bool SendCommand(std::string cmd_msg);
+    bool SendMessage(uint8_t* msg_ptr, size_t length);
 
     /*!
      * SetSvElevationCutoff
@@ -362,6 +363,9 @@ private:
 
 	bool ParseVersion(std::string packet);
 
+    unsigned long CRC32Value(int i);
+    unsigned long CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
+                                        unsigned char *ucBuffer ); /* Data block */
 
     //////////////////////////////////////////////////////
     // Serial port reading members
@@ -446,7 +450,7 @@ private:
 	std::string protocol_version_;		//!< Receiver version, OEM4, OEMV, OEM6, or UNKNOWN
 	std::string serial_number_; //!< Receiver serial number
 	std::string hardware_version_; //!< Receiver hardware version
-	std::string software_version_; //!< Receiver hardware version
+	std::string software_version_; //!< Receiver software version
 	std::string model_;				//!< Receiver model number
 
 	bool l2_capable_; //!< Can the receiver handle L1 and L2 or just L1?
