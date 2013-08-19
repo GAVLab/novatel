@@ -1077,18 +1077,21 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
           }
         case GPSEPHEMB_LOG_TYPE: {
             GpsEphemeris ephemeris;
+            header_length = (uint16_t) *(message+3);
+            std::cout << "GPSEPHEMB message: " << std::endl
+                  << "PRN #: " << (double)*(message+header_length)<< std::endl;
+            //printHex(message, length);
             if (length>sizeof(ephemeris)) {
-            	std::stringstream ss;
-            	ss << "Novatel Driver: GpsEphemeris mismatch\n";
-            	ss << "\tlength = " << length << "\n";
-	            ss << "\tsizeof msg = " << sizeof(ephemeris);
-	            log_warning_(ss.str().c_str());
-	          } else {
-	            memcpy(&ephemeris, message, sizeof(ephemeris));
-	            if (gps_ephemeris_callback_)
-	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
-	          }
-            break;
+                std::stringstream ss;
+                ss << "Novatel Driver: GpsEphemeris mismatch\n";
+                ss << "\tlength = " << length << "\n";
+                ss << "\tsizeof msg = " << sizeof(ephemeris);
+                log_warning_(ss.str().c_str());
+            } else {
+                memcpy(&ephemeris, message, sizeof(ephemeris));
+                if (gps_ephemeris_callback_)
+                    gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            }
         }
         case RAWEPHEMB_LOG_TYPE:
             RawEphemeris raw_ephemeris;
