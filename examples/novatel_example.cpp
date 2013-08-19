@@ -35,9 +35,13 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    //while(1);
+    my_gps.ConfigureLogs("BESTPOSB ONTIME 1.0; GPSEPHEMB ONCE");
 
-    my_gps.Disconnect();
+
+
+    while(1);
+
+//    my_gps.Disconnect();
 
     return 0;
 }
