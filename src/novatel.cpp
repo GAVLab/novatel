@@ -80,7 +80,11 @@ void DefaultBestPositionCallback(Position best_position, double time_stamp){
                   "  GPS milliseconds: " << best_position.header.gps_millisecs << std::endl <<
                   "  Latitude: " << best_position.latitude << std::endl <<
                   "  Longitude: " << best_position.longitude << std::endl <<
-                  "  Height: " << best_position.height << std::endl << std::endl;
+                  "  Height: " << best_position.height << std::endl << std::endl <<
+                  "  Solution status: " << best_position.solution_status << std::endl <<
+                  "  position type: " << best_position.position_type << std::endl <<
+                  "  number of svs tracked: " << (double)best_position.number_of_satellites << std::endl <<
+                  "  number of svs used: " << (double)best_position.number_of_satellites_in_solution << std::endl;
 }
 
 Novatel::Novatel() {
