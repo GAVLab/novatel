@@ -51,6 +51,9 @@ namespace novatel {
 #define MAX_NUM_SAT 28	// Maximum number of satellites with information in the RTKDATA log
 #define HEADER_SIZE 28 // Binary header size for OEM 4, V, and 6 receivers
 #define SHORT_HEADER_SIZE 12 // short binary header size
+#define NOVATEL_SYNC_BYTE_1 0xAA
+#define NOVATEL_SYNC_BYTE_2 0x44
+#define NOVATEL_SYNC_BYTE_3 0x12
 
 // IMU Constants
 // scale factor between integer counts and change in velocity in m/s for AG11 and AG58
@@ -675,9 +678,9 @@ struct RangeMeasurements {
  */
 PACK( 
 struct CompressedRangeRecord {
-    int64_t doppler:28;                             //!< Doppler frequency [Hz]
-    uint64_t pseudorange:36;                         //!<  pseudorange [m]
-    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
+    int64_t doppler:28;                             //!< Doppler frequency [Hz]; SF = 1/256
+    uint64_t pseudorange:36;                         //!<  pseudorange [m]; SF = 1/128
+    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]; SF = 1/256
     uint16_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
     uint16_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
     uint16_t satellite_prn:8;                       //!< SV PRN number
@@ -763,25 +766,21 @@ struct GpsEphemeris
  * Ephemeris older than 6 hours is not output
  */
 PACK(
-struct Word {
-    uint8_t byte[3];
-});
-PACK(
-struct Subframe {
-    Word word[10];
-});
-PACK(
 struct RawEphemeris {
     Oem4BinaryHeader header;
     uint32_t prn;                       //!< Satellite PRN number
     uint32_t ephem_reference_week_num;  //!< Ephemeris reference week number
     uint32_t ephem_reference_seconds;   //!< Ephemeris reference time [sec]
-    Subframe subframe1;                 //!< Subframe 1 data
-    Subframe subframe2;                 //!< Subframe 2 data
-    Subframe subframe3;                 //!< Subframe 3 data
+    uint8_t subframe1[30];              //!< Subframe 1 data
+    uint8_t subframe2[30];              //!< Subframe 2 data
+    uint8_t subframe3[30];              //!< Subframe 3 data
     uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
-
 });
+PACK(
+struct RawEphemerides {
+    RawEphemeris ephemeris[MAX_NUM_SAT];
+});
+
 
 
 /*!

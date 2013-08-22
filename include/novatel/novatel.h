@@ -115,7 +115,7 @@ public:
 	 * @throws ConnectionFailedException connection attempt failed.
 	 * @throws UnknownErrorCodeException unknown error code returned.
 	 */
-	 bool Connect(std::string port, int baudrate=115200, bool search=true);
+     bool Connect(std::string port, int baudrate=115200, bool search=true);
 
    /*!
     * Disconnects from the serial port
@@ -185,7 +185,7 @@ public:
 
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
-    bool SendCommand(std::string cmd_msg);
+    bool SendCommand(std::string cmd_msg, bool wait_for_ack=true);
     bool SendMessage(uint8_t* msg_ptr, size_t length);
 
     /*!
@@ -227,7 +227,7 @@ public:
      */
     bool SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant);
 
-    bool HardwareReset(uint8_t rst_delay=0);
+    bool HardwareReset();
     /*!
      * HotStartReset
      * Restarts the GPS receiver, initialized with
@@ -246,6 +246,8 @@ public:
      * any initial or aiding data.
      */
     bool ColdStartReset();
+
+    void SendRawEphemeridesToReceiver(RawEphemerides raw_ephemerides);
 
     /*!
      * Requests version information from the receiver
@@ -321,7 +323,7 @@ public:
 
     void set_raw_msg_callback(RawMsgCallback handler) {
         raw_msg_callback_=handler;};
-
+    RawEphemerides test_ephems_;
 private:
 
   bool Connect_(std::string port, int baudrate);
@@ -362,6 +364,8 @@ private:
 	void ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
+
+    bool SendBinaryDataToReceiver(uint8_t* msg_ptr, size_t length);
 
     unsigned long CRC32Value(int i);
     unsigned long CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
