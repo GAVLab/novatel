@@ -102,8 +102,8 @@ if(BUILD_WITH_ROS)
   )
 else(BUILD_WITH_ROS) # do a classical install
   install(TARGETS novatel
-    ARCHIVE DESTINATION /usr/local/lib/${PROJECT_NAME}
-    LIBRARY DESTINATION /usr/local/lib/${PROJECT_NAME}
+    ARCHIVE DESTINATION /usr/local/lib
+    LIBRARY DESTINATION /usr/local/lib
     RUNTIME DESTINATION /usr/local/bin/${PROJECT_NAME}
   )
   install(DIRECTORY include/${PROJECT_NAME}/

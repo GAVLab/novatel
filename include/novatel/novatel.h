@@ -42,7 +42,7 @@
 #include <string>
 #include <cstring> // for size_t
 
-#include "novatel/generate_crc.hpp"
+// #include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -58,6 +58,8 @@ namespace novatel {
 
 // used to convert lat and long to UTM coordinates
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
+#define CRC32_POLYNOMIAL 0xEDB88320L
+
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -100,6 +102,8 @@ typedef boost::function<void(Position&, double&)> BestPseudorangePositionCallbac
 typedef boost::function<void(Position&, double&)> RtkPositionCallback;
 
 
+
+/* Primary Class */
 class Novatel
 {
 public:
