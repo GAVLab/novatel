@@ -535,13 +535,6 @@ public:
 
     }
 
-    gps_.SendCommand("unassignall all");
-    gps_.SendCommand("unlockoutall");
-    gps_.SendCommand("ecutoff 5.0");
-    gps_.SendCommand("forcegpsl2code auto");
-    gps_.SendCommand("passtopassmode enable on off");
-    // gps_.SendCommand("")
-
     // Ros Spinner
     if (!ephem_log_) {
       // get an ephemeris blast for a little bit, then only on new.
