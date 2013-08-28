@@ -86,4 +86,4 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 David Hodo <david.hodo@gmail.com>
 
-Portions of this library are based on previous code by William Travis and Scott Martin.
+Portions of this library are based on previous code by William Travis and Scott Martin.  Thanks to William Woodall for the serial library.

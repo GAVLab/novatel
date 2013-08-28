@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     }
     else {
         cout << "Failed to connect." << endl;
-        return -1;
+        return 0;
     }
 
     //while(1);

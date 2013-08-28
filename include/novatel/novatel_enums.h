@@ -4,11 +4,16 @@
 
 #include <stdint.h>  // use fixed size integer types, rather than standard c++ types
 
+namespace novatel {
 
 //*******************************************************************************
 // USER-DEFINED ENUMS
 //*******************************************************************************
 
+enum true_false {
+    FALSE = 0,
+    TRUE = 1
+};
 
 enum return_type {
     success,
@@ -38,6 +43,25 @@ enum rec_type {
 // NOVATEL ENUMS
 //*******************************************************************************
 
+enum RangeRejectCode { //!< Used in TRACKSTAT
+    GOOD = 0,               //!< Observation is good
+    BADHEALTH = 1,          //!< Bad SV health indicated by ephemeris
+    OLDEPHEMERIS = 2,       //!< Ephemeris not updated during the las 3 hours
+    ECCENTRICANOMALY = 3,   //!< Eccentric anomaly error during computation of SV position
+    TRUEANOMALY = 4,        //!< True anomaly error during computation of SV position
+    SATCOORDINATEERROR = 5, //!< SV coordinate error during computation of SV position
+    ELEVATIONERROR = 6,     //!< Elevation error due to SV below the cut-off angle
+    MISCLOSURE = 7,         //!< Misclosure too large due to excessive gap between estimated and actual positions
+    NODIFFCORR = 8,         //!< No compatible differential correction is available for this particular satellite
+    NOEPHEMERIS = 9,        //!< Ephemeris data not yet received for this SV
+    INVALIDIODE = 10,       //!< Invalide IODE (Issue of Data Ephemeris)
+    LOCKEDOUT = 11,         //!< SV is excluded by the user (LOCKOUT command)
+    LOWPOWER = 12,          //!< SV rejected due to low C/No ratio
+    NOIONOCORR = 16,        //!< No ionospheric correction available for this SV
+    NOTUSED = 17,           //!< Observation ignored and not used in solution
+    NA = 99,                //!< No obseration
+    BAD_INTEGRITY = 100,    //!< Integrity of the pseudorange is bad
+};
 
 enum AMBIGUITY_TYPE {
     UNDEFINED = 0,
@@ -112,30 +136,34 @@ enum SolutionStatus
 
 enum PositionType
 {
-	NONE,
-	FIXEDPOS,
-	FIXEDHEIGHT,
-	Reserved,
-	FLOATCONV,
-	WIDELANE,
-	NARROWLANE,
-	DOPPLER_VELOCITY=8,
-	SINGLE=16,
-	PSRDIFF,
-	WAAS,
-	PROPOGATED,
-	OMNISTAR,
-	L1_FLOAT=32,
-	IONOFREE_FLOAT,
-	NARROW_FLOAT,
-	L1_INT=48,
-	WIDE_INT,
-	NARROW_INT,
-	RTK_DIRECT_INS,
-	OMNISTAR_HP=64,
-	OMNISTAR_XP,
-	CDGPS,
-	RTK_FIXED_INS = 56
+    NONE = 0,
+    FIXEDPOS = 1,
+    FIXEDHEIGHT = 2,
+    Reserved = 3,
+    FLOATCONV = 4,
+    WIDELANE = 5,
+    NARROWLANE = 6,
+    DOPPLER_VELOCITY = 8,
+    SINGLE = 16,
+    PSRDIFF = 17,
+    WAAS = 18,
+    PROPOGATED = 19,
+    OMNISTAR = 20,
+    L1_FLOAT = 32,
+    IONOFREE_FLOAT = 33,
+    NARROW_FLOAT = 34,
+    L1_INT = 48,
+    WIDE_INT = 49,
+    NARROW_INT = 50,
+    RTK_DIRECT_INS = 51,
+    INS = 52,
+    INS_PSRSP = 53,
+    INS_PSRDIFF = 54,
+    INS_RTKFLOAT = 55,
+    INS_RTKFIXED = 56,
+    OMNISTAR_HP = 64,
+	OMNISTAR_XP = 65,
+	CDGPS = 66,
 };
 
 enum DatumID
@@ -256,6 +284,40 @@ enum EventType
 	SET=1		//!< bit was set
 };
 
+enum PDPSwitch //!< Used in PDPFILTER Command
+{
+    DISABLE = 0,
+    ENABLE = 1,
+    RESET = 2,
+};
+
+enum PDPMode
+{
+    NORMAL = 0,
+    RELATIVE = 1,
+};
+
+enum PDPDynamics
+{
+    AUTO = 0,       //!< Autodetect dynamics mode
+    STATIC = 1,     //!< Static Mode
+    DYNAMIC = 2,    //!< Dynamic Mode
+};
+
+enum FRESET_TARGET
+{
+    STANDARD = 0,           //!< [DEFAULT] Clears commands, ephemeris, and almanac
+    COMMAND = 1,            //!< Clears saved configuration
+    GPSALMANAC = 2,         //!< Clears stored GPS almanac
+    GPSEPHEM = 3,           //!< Clears stored GPS ephemeris
+    GLOEPHEM = 4,           //!< Clears stored GLONASS ephemeris
+    MODEL = 5,              //!< Clears the currently selected model
+    CLKCALIBRATION = 11,    //!< Clears parameters entered using CLOCKCALIBRATE command
+    SBASALMANAC = 20,       //!< Clears stored SBAS almanac
+    LAST_POSITION = 21,     //!< Resets the position using the last stored position
+    GLOALMANAC = 31,        //!< Clears the stored GLONASS almanac
+    LBAND_TCXO_OFFSET = 38, //!< Removes the TCXO offset information from NVM (not in OEMStar firmware)
+};
 
 enum BINARY_LOG_TYPE
 {
@@ -319,5 +381,7 @@ enum BINARY_LOG_TYPE
   VEHICLEBODYROTATION_LOG_TYPE = 642
 };
 typedef enum BINARY_LOG_TYPE BINARY_LOG_TYPE;
+
+}
 
 #endif
