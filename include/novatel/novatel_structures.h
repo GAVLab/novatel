@@ -781,7 +781,27 @@ struct RawEphemerides {
     RawEphemeris ephemeris[MAX_NUM_SAT];
 });
 
+/*!
+ * RAWALM Message Structure
+ * Contains the undecoded almanac subframes as received from the satellite
+ */
+PACK(
+struct RawAlmanacData
+{
+	uint16_t svid;
+	Subframe subframe;			// 30 bytes of subframe page data
+});
+PACK(
+struct RawAlmanac
+{
+	Oem4BinaryHeader header;
+	uint32_t ref_week;
+	uint32_t ref_time;			// [sec]
+	uint32_t num_of_subframes;	// numbers of subframes to follow
+	RawAlmanacData subframe_data;
+	uint8_t crc[4];
 
+});
 
 /*!
  * Satellite Position Structure
