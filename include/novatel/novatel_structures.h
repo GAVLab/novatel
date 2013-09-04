@@ -789,7 +789,7 @@ PACK(
 struct RawAlmanacData
 {
 	uint16_t svid;
-	Subframe subframe;			// 30 bytes of subframe page data
+    uint8_t subframe[30];			// 30 bytes of subframe page data
 });
 PACK(
 struct RawAlmanac

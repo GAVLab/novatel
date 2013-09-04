@@ -490,9 +490,11 @@ bool Novatel::InjectAlmanac(Almanac almanac) {
         cout << "SIZEOF: " << sizeof(almanac) << endl;
         uint8_t* msg_ptr = (unsigned char*)&almanac;
         bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(almanac));
-        if(result)
+        if(result) {
             cout << "Sent ALMANAC." << endl;
-    } catch {
+            return true;
+        }
+    } catch (std::exception &e){
         std::stringstream output;
         output << "Error in Novatel::InjectAlmanac(): " << e.what();
         log_error_(output.str());
