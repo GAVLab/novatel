@@ -219,7 +219,7 @@ public:
 
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
-
+    bool InjectAlmanac(Almanac almanac);
     /*!
      * SetL1CarrierSmoothing sets the amount of smoothing to be performed on
      * code measurements. L2 smoothing is available in OEMV receivers, but

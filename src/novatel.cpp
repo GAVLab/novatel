@@ -485,6 +485,18 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     return SendCommand(time_cmd.str());
 }
 
+bool Novatel::InjectAlmanac(Almanac almanac) {
+    try {
+
+
+    } catch {
+        std::stringstream output;
+        output << "Error in Novatel::InjectAlmanac(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
 bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant) {
     try {
         std::stringstream smooth_cmd;
