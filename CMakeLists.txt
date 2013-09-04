@@ -8,26 +8,24 @@ project(novatel)
 
 option(BUILD_WITH_ROS "Build ROS node and use catkin." ON)
 
-if (NOT catkin_FOUND)
-	SET(BUILD_WITH_ROS OFF)
-endif(NOT catkin_FOUND)
+# if (NOT catkin_FOUND)
+#   SET(BUILD_WITH_ROS OFF)
+# endif(NOT catkin_FOUND)
 
 if (BUILD_WITH_ROS)
-	## Find catkin macros and libraries
+  ## Find catkin macros and libraries
 	## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 	## is used, also find other catkin packages
 	## libraries found here are added to catkin_LIBRARIES and linked automatically
-	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf)
-
-
-
-	## LIBRARIES: libraries you create in this project that dependent projects also need
+	find_package(catkin COMPONENTS serial roslib roscpp rosconsole tf gps_msgs nav_msgs sensor_msgs)
+	
+  ## LIBRARIES: libraries you create in this project that dependent projects also need
 	## CATKIN_DEPENDS: catkin_packages dependent projects also need
 	## DEPENDS: system dependencies of this project that dependent projects also need
 	catkin_package(
 	  INCLUDE_DIRS include
 	  LIBRARIES novatel
-	  CATKIN_DEPENDS serial roslib roscpp rosconsole
+	  CATKIN_DEPENDS serial roslib roscpp rosconsole tf gps_msgs nav_msgs sensor_msgs
 	  DEPENDS Boost
 	)
 else()
@@ -56,12 +54,26 @@ add_library(novatel
 )
 
 target_link_libraries(novatel
-  ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
 )
+
+##############
+## Examples ##
+##############
 
 option(NOVATEL_BUILD_EXAMPLES "Build all of the Novatel examples." OFF)
 
+
+if(serial_FOUND)
+  include_directories(${serial_INCLUDE_DIRS})
+  list(APPEND NOVATEL_LINK_LIBS ${serial_LIBRARIES} pthread)
+  if(UNIX AND NOT APPLE)
+    list(APPEND NOVATEL_LINK_LIBS rt)
+  endif()
+else(serial_FOUND)
+  message(FATAL_ERROR "Serial library was not found.")
+endif(serial_FOUND)
 
 if (NOVATEL_BUILD_EXAMPLES)
 	# Declare a cpp executable
@@ -87,19 +99,31 @@ endif (BUILD_WITH_ROS)
 
 # Mark executables and/or libraries for installation
 if(BUILD_WITH_ROS)
-install(TARGETS novatel novatel_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+  install(TARGETS novatel novatel_node
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
+  # Mark cpp header files for installation
+  install(DIRECTORY include/${PROJECT_NAME}/
+    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
+  )
+else(BUILD_WITH_ROS) # do a classical install
+  install(TARGETS novatel
+    ARCHIVE DESTINATION /usr/local/lib
+    LIBRARY DESTINATION /usr/local/lib
+    RUNTIME DESTINATION /usr/local/bin/${PROJECT_NAME}
+  )
+  install(DIRECTORY include/${PROJECT_NAME}/
+    DESTINATION /usr/local/include/${PROJECT_NAME}
+  )
+  set(CMAKE_MODULE_PATH ${CMAKE_ROOT}/Modules)
+  message(STATUS "module path: " ${CMAKE_MODULE_PATH})
+  install(FILES Findnovatel.cmake DESTINATION ${CMAKE_MODULE_PATH})
 endif (BUILD_WITH_ROS)
 
-# Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

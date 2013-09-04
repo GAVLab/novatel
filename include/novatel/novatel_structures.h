@@ -39,6 +39,10 @@
 #define NOVATELSTRUCTURES_H
 
 #include "novatel_enums.h"
+#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
+namespace novatel {
 
 #define MAX_NOUT_SIZE      (8192)   // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
 #define EPH_CHAN 33
@@ -63,7 +67,7 @@
 	#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
 #endif
 
-#include <stdint.h>  // use fixed size integer types, rather than standard c++ types
+
 
 
 //*******************************************************************************
@@ -604,17 +608,10 @@ struct IonosphericModel {
     uint8_t 	crc[4];	//!< 32-bit cyclic redundancy check (CRC)
 });
 
-
-
-
-
-
-
-
-
-
-
-
+/*!
+ * Channel Tracking Status
+ * Used in logs RANGE and TRACKSTAT
+ */
 PACK(
 struct ChannelStatus {
 	unsigned tracking_state : 5;
@@ -635,51 +632,15 @@ struct ChannelStatus {
 	unsigned channel_assignment : 1;
 });
 
-// /*!
-//  * Pseudorange Message Structure
-//  * This log contains the pseudorange information for a
-//  * single channel. Used in the RangeMeasurements structure.
-//  */
-// PACK(
-// struct RangeData {
-//     uint16_t satellite_prn;                  //!< SV PRN number
-//     uint16_t glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
-//     double pseudorange;                      //!<  pseudorange [m]
-//     float pseudorange_standard_deviation;    //!< pseudorange standard deviation [m]
-//     double accumulated_doppler;             //!< accumulated doppler [cycles]
-//     float accumulated_doppler_std_deviation; //!< accumulated doppler standard deviation [cycles]
-//     float doppler;                           //!< Doppler frequency [Hz]
-//     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]
-//     float locktime;                          //!< Number of seconds of continuous tracking [sec]
-//     ChannelStatus channel_status;            //!< channel tracking status
-// });
-
-
-// /*!
-//  * RANGE Message Structure
-//  * This log contains the channel measurements for the
-//  * currently tracked satellites. When using this log,
-//  * please keep in mind the constraints noted along with
-//  * the description.
-//  */
-// PACK(
-// struct RangeMeasurements {
-//     Oem4BinaryHeader header;			//!< Message header
-//     int32_t number_of_observations;     //!< Number of ranges observations in the following message
-//     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
-//     uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
-// });
-
-
-
 /*!
  * Pseudorange Message Structure
  * This log contains the pseudorange information for a
  * single channel. Used in the RangeMeasurements structure.
  */
+PACK(
 struct RangeData {
-    unsigned short satellite_prn;                  //!< SV PRN number
-    unsigned short glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
+    uint16_t satellite_prn;                  //!< SV PRN number
+    uint16_t glonass_frequency;              //!< Frequency number of GLONASS SV (0 for GPS)
     double pseudorange;                      //!<  pseudorange [m]
     float pseudorange_standard_deviation;    //!< pseudorange standard deviation [m]
     double accumulated_doppler;             //!< accumulated doppler [cycles]
@@ -687,9 +648,10 @@ struct RangeData {
     float doppler;                           //!< Doppler frequency [Hz]
     float carrier_to_noise;                  //!< Signal/Noise [dB-Hz]
     float locktime;                          //!< Number of seconds of continuous tracking [sec]
-    // unsigned long channel_status;
-    ChannelStatus channel_status;
-};
+    ChannelStatus channel_status;            //!< channel tracking status
+});
+
+
 /*!
  * RANGE Message Structure
  * This log contains the channel measurements for the
@@ -697,27 +659,13 @@ struct RangeData {
  * please keep in mind the constraints noted along with
  * the description.
  */
+PACK(
 struct RangeMeasurements {
-    Oem4BinaryHeader header;            //!< Message header
+    Oem4BinaryHeader header;			//!< Message header
     int32_t number_of_observations;     //!< Number of ranges observations in the following message
     RangeData range_data[MAX_CHAN];      //!< Range data for each available channel
-    uint8_t     crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    uint8_t 	crc[4];						//!< 32-bit cyclic redundancy check (CRC)
+});
 
 
 /*!
@@ -757,8 +705,7 @@ struct CompressedRangeMeasurements {
     int32_t number_of_observations;                 //!< Number of ranges observations in the following message
     CompressedRangeData range_data[MAX_CHAN];       //!< Range data for each available channel
     uint8_t 	crc[4];                             //!< 32-bit cyclic redundancy check (CRC)
-}//;
-);
+});
 
 //*******************************************************************************
 // SATELLITE INFORMATION GPS STRUCTURES
@@ -773,7 +720,7 @@ struct CompressedRangeMeasurements {
 PACK(
 struct GpsEphemeris
 {
-    Oem4BinaryHeader header;        //!< Message header
+    Oem4BinaryHeader header;		//!< Message header
     uint32_t prn;                   //!< PRN number
     double time_of_week;            //!< time stamp of subframe 0 (s)
     uint32_t health;                //!< health status, defined in ICD-GPS-200
@@ -809,10 +756,31 @@ struct GpsEphemeris
     uint8_t crc[4];                 //!< 32-bit cyclic redundancy check (CRC)
 });
 
+/*!
+ * RAWEPHEM Message Structure
+ * contains the raw binary information for subframes one, two
+ * and three from the satellite with the parity information removed.
+ * Ephemeris older than 6 hours is not output
+ */
 PACK(
-  struct GpsEphemerisData {
-    Oem4BinaryHeader header;    //!< Message header
-    GpsEphemeris ephemeris;
+struct Word {
+    uint8_t byte[3];
+});
+PACK(
+struct Subframe {
+    Word word[10];
+});
+PACK(
+struct RawEphemeris {
+    Oem4BinaryHeader header;
+    uint32_t prn;                       //!< Satellite PRN number
+    uint32_t ephem_reference_week_num;  //!< Ephemeris reference week number
+    uint32_t ephem_reference_seconds;   //!< Ephemeris reference time [sec]
+    Subframe subframe1;                 //!< Subframe 1 data
+    Subframe subframe2;                 //!< Subframe 2 data
+    Subframe subframe3;                 //!< Subframe 3 data
+    uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+
 });
 
 
@@ -851,6 +819,36 @@ struct SatellitePositions {
     uint8_t 	crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
 });
 
+/*!
+ * SATVIS Message Structure
+ * The SATVIS log is meant to provide a brief overview. The satellite positions
+ * and velocities used in the computation of this log are based on Almanac
+ * orbital parameters, not the higher precision Ephemeris parameters
+ */
+PACK(
+struct SatelliteVisibilityData {
+    int16_t satellite_prn;              //!< SV PRN number
+        //!< GPS 1-32
+        //!< SBAS 120-138
+        //!< GLONASS
+    int16_t glonass_frequency;          //!< GLONASS frequency +7
+    uint32_t health;                    //!< Satellite Health
+    double elevation;                   //!< SV elevation [deg]
+    double azimuth;                     //!< SV azimuth [deg]
+    double theoretical_doppler;         //!< Theoretical Doppler frequency of SV [Hz]
+    double apparent_doppler;            //!< Theoretical Doppler with clock drift correction added [Hz]
+});
+
+PACK(
+struct SatelliteVisibility {
+    Oem4BinaryHeader header;				//!< Message header
+    true_false sat_vis;                     //!< Reserved
+    true_false complete_almanac_used;       //!< Was Complete almanac used
+    uint32_t number_of_satellites;          //!< Number of satellites in following message
+    SatelliteVisibilityData data[MAX_CHAN];   //!< Position data for each satellite
+    uint8_t 	crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+});
+
 
 /*!
  * TIME Message Structure
@@ -880,6 +878,32 @@ struct TimeOffset {
     uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
 });
 
+/*!
+ * TRACKSTAT Message Structure
+ * This log provides the Tracking Status information for each
+ * receiver channel
+ */
+struct TrackStatusData {
+    uint16_t prn;                       //!< SV prn
+    int16_t glonass_frequency;          //!< GLONASS frequency +7
+    ChannelStatus channel_track_status; //!< Channel tracking status
+    double pseudorange;                 //!< Pseudorange
+    float doppler_frequency;            //!< Doppler frequency [Hz]
+    float cno_ratio;                    //!< Carrier to noise density ratio [dB-Hz]
+    float lock_time;                    //!< Number of seconds of continuous tracking (no cycle slips)
+    float pseudorange_residual;         //!< Pseudorange residual from pseudorange filter [m]
+    RangeRejectCode range_reject_code;  //!< Range reject code from pseudorange filter
+    float pseudorange_weight;           //!< Pseudorange filter weighting
+};
+struct TrackStatus {
+    Oem4BinaryHeader header;            //!< Message header
+    SolutionStatus solution_status;     //!< Solution status
+    PositionType position_type;         //!< Position type
+    float elevation_cutoff_angle;       //!< Tracking elevation cutoff angle
+    int32_t number_of_channels;         //!< Number of channels with information following
+    TrackStatusData data[MAX_CHAN];     //!< Tracking Status data repeated per channel
+    uint8_t crc[4];
+};
 
 //*******************************************************************************
 // RTK GPS STRUCTURES
@@ -1193,7 +1217,7 @@ struct ReceiverHardwareStatus
     int8_t crc[4];              //!< 32-bit crc
 };
 
-
+}
 
 
 #endif

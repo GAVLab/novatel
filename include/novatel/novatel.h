@@ -42,7 +42,7 @@
 #include <string>
 #include <cstring> // for size_t
 
-#include "novatel/generate_crc.hpp"
+// #include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -58,6 +58,8 @@ namespace novatel {
 
 // used to convert lat and long to UTM coordinates
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
+#define CRC32_POLYNOMIAL 0xEDB88320L
+
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -89,14 +91,19 @@ typedef boost::function<void(IonosphericModel&, double&)> IonosphericModelCallba
 typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCallback;
 typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
+typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
+typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
+typedef boost::function<void(TrackStatus&, double&)> TrackingStatusCallback;
 typedef boost::function<void(ReceiverHardwareStatus&, double&)> ReceiverHardwareStatusCallback;
 typedef boost::function<void(Position&, double&)> BestPositionCallback;
 typedef boost::function<void(Position&, double&)> BestPseudorangePositionCallback;
 typedef boost::function<void(Position&, double&)> RtkPositionCallback;
 
 
+
+/* Primary Class */
 class Novatel
 {
 public:
@@ -158,11 +165,22 @@ public:
     void setLogErrorCallback(LogMsgCallback error_callback){log_error_=error_callback;};
 
     /*!
-     * Request the given list of logs from the receiver
-     * 
+     * Request the given list of logs from the receiver.
+     * Format: "[LOGNAME][MESSAGETYPE] [PORT] [LOGTYPE] [PERIOD] ..."
+     * [MESSAGETYPE] - [A]=ASCII
+     *               - [B]=Binary
+     *               . [empty]=Abreviated ASCII
      * log_string format: "BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0"
      */
     void ConfigureLogs(std::string log_string);
+    void Unlog(std::string log); //!< Stop logging a specified log
+    void UnlogAll(); //!< Stop logging all logs that aren't set with HOLD parameter
+
+    /*!
+     * SaveConfiguration() saves the current receiver configuration
+     * in nonvolatile memory
+     */
+    void SaveConfiguration();
 
     void ConfigureInterfaceMode(std::string com_port,  
       std::string rx_mode, std::string tx_mode);
@@ -173,9 +191,64 @@ public:
 
     bool SendCommand(std::string cmd_msg);
 
-    bool HardwareReset(uint8_t rst_delay=0);
+    /*!
+     * SetSvElevationCutoff
+     * Sets the elevation cut-off angle. Svs below this angle
+     * are not automatically searched for and are not used
+     * in the position calculation. Angles < 5 deg are not
+     * recommended except in specific situations
+     * (Angle = +-90 deg)
+     */
+    bool SetSvElevationAngleCutoff(float angle);
 
-	void UnlogAll();
+    /*!
+     * Pseudrange/Delta-Phase filter (PDPFILTER)- smooths positions
+     * and bridges gaps in GPS coverage. Enabled by default on
+     * OEMStar receiver.
+     */
+    void PDPFilterDisable();
+    void PDPFilterEnable();
+    void PDPFilterReset();
+    void PDPModeConfigure(PDPMode mode, PDPDynamics dynamics);
+
+    /*!
+     * SetPositionTimeout (POSTIMEOUT) sets the timeout value for the
+     * position calculation. In position logs, the position_type field
+     * is set to NONE when this timeout expires (0 - 86400 sec)
+     */
+    void SetPositionTimeout(uint32_t seconds);
+
+    bool SetInitialPosition(double latitude, double longitude, double height);
+    bool SetInitialTime(uint32_t gps_week, double gps_seconds);
+
+    /*!
+     * SetL1CarrierSmoothing sets the amount of smoothing to be performed on
+     * code measurements. L2 smoothing is available in OEMV receivers, but
+     * NOT in OEMStar Firmaware receivers.
+     *      l1_time_constant : 2<= time constant <= 2000 [sec]
+     *      l2_time_constant : 5<= time constant <= 2000 [sec] (firmware default = 100)
+     */
+    bool SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant);
+
+    bool HardwareReset(uint8_t rst_delay=0);
+    /*!
+     * HotStartReset
+     * Restarts the GPS receiver, initialized with
+     * Ephemeris, Almanac, Position, Time, etc.
+     */
+    bool HotStartReset();
+    /*!
+     * WarmStartReset
+     * Restarts the GPS receiver, initialized with
+     * Ephemeris, Almanac, NOT Position and Time info
+     */
+    bool WarmStartReset();
+    /*!
+     * ColdStartReset
+     * Restarts the GPS receiver, initialized without
+     * any initial or aiding data.
+     */
+    bool ColdStartReset();
 
     /*!
      * Requests version information from the receiver
@@ -232,10 +305,16 @@ public:
         compressed_range_measurements_callback_=handler;};
     void set_gps_ephemeris_callback(GpsEphemerisCallback handler){
         gps_ephemeris_callback_=handler;};
+    void set_raw_ephemeris_callback(RawEphemerisCallback handler){
+        raw_ephemeris_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
+    void set_satellite_visibility_callback(SatelliteVisibilityCallback handler){
+        satellite_visibility_callback_=handler;};
     void set_time_offset_callback(TimeOffsetCallback handler){
         time_offset_callback_=handler;};
+    void set_tracking_status_callback(TrackingStatusCallback handler){
+        tracking_status_callback_=handler;};
     void set_receiver_hardware_status_callback(ReceiverHardwareStatusCallback handler){
         receiver_hardware_status_callback_=handler;};
     void set_best_pseudorange_position_callback(BestPseudorangePositionCallback handler){
@@ -337,8 +416,11 @@ private:
     RangeMeasurementsCallback range_measurements_callback_;
     CompressedRangeMeasurementsCallback compressed_range_measurements_callback_;
     GpsEphemerisCallback gps_ephemeris_callback_;
+    RawEphemerisCallback raw_ephemeris_callback_;
     SatellitePositionsCallback satellite_positions_callback_;
+    SatelliteVisibilityCallback satellite_visibility_callback_;
     TimeOffsetCallback time_offset_callback_;
+    TrackingStatusCallback tracking_status_callback_;
     ReceiverHardwareStatusCallback receiver_hardware_status_callback_;
     BestPseudorangePositionCallback best_pseudorange_position_callback_;
     RtkPositionCallback rtk_position_callback_;

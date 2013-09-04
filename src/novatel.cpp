@@ -3,16 +3,54 @@
 #include <valarray>
 #include <fstream>
 #include <sstream>
+
 using namespace std;
 using namespace novatel;
-
-
 
 /////////////////////////////////////////////////////
 // includes for default time callback
 #define WIN32_LEAN_AND_MEAN
 #include "boost/date_time/posix_time/posix_time.hpp"
 ////////////////////////////////////////////////////
+
+
+/* --------------------------------------------------------------------------
+Calculate a CRC value to be used by CRC calculation functions.
+-------------------------------------------------------------------------- */
+unsigned long CRC32Value(int i)
+{
+  int j;
+  unsigned long ulCRC;
+  ulCRC = i;
+  for ( j = 8 ; j > 0; j-- ) {
+    if ( ulCRC & 1 )
+      ulCRC = ( ulCRC >> 1 ) ^ CRC32_POLYNOMIAL;
+    else
+      ulCRC >>= 1;
+  }
+    return ulCRC;
+}
+
+
+/* --------------------------------------------------------------------------
+Calculates the CRC-32 of a block of data all at once
+-------------------------------------------------------------------------- */
+unsigned long CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
+                                    unsigned char *ucBuffer ) /* Data block */
+{
+  unsigned long ulTemp1;
+  unsigned long ulTemp2;
+  unsigned long ulCRC = 0;
+  while ( ulCount-- != 0 ) {
+    ulTemp1 = ( ulCRC >> 8 ) & 0x00FFFFFFL;
+    ulTemp2 = CRC32Value( ((int) ulCRC ^ *ucBuffer++ ) & 0xff );
+    ulCRC = ulTemp1 ^ ulTemp2;
+  }
+  return( ulCRC );
+}
+
+
+
 
 
 /*!
@@ -281,8 +319,7 @@ bool Novatel::Ping(int num_attempts) {
 bool Novatel::SendCommand(std::string cmd_msg) {
 	try {
 		// sends command to GPS receiver
-    serial_port_->write(cmd_msg+"\r\n");
-    // printf("SendCommand sent the command");
+        serial_port_->write(cmd_msg + "\r\n");
 		// wait for acknowledgement (or 2 seconds)
 		boost::mutex::scoped_lock lock(ack_mutex_);
 		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
@@ -290,22 +327,217 @@ bool Novatel::SendCommand(std::string cmd_msg) {
       log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
 			return true;
 		} else {
-      log_error_("Command " + cmd_msg + "failed.");
+            log_error_("Command '" + cmd_msg + "' failed.");
 			return false;
 		}
 	} catch (std::exception &e) {
 		std::stringstream output;
-    output << "Error in Novatel::SendCommand(): " << e.what();
-    log_error_(output.str());
-    return false;
+        output << "Error in Novatel::SendCommand(): " << e.what();
+        log_error_(output.str());
+        return false;
 	}
 }
 
+bool Novatel::SetSvElevationAngleCutoff(float angle) {
+    try {
+        std::stringstream ang_cmd;
+        ang_cmd << "ECUTOFF " << angle;
+        return SendCommand(ang_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetSvElevationCutoff(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+void Novatel::PDPFilterDisable() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER DISABLE" ;
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterDisable(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::PDPFilterEnable() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER ENABLE" ;
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterEnable(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::PDPFilterReset() {
+    try{
+    std::stringstream pdp_cmd;
+    pdp_cmd << "PDPFILTER RESET";
+    bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPFilterReset(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+//! TODO: PROPAK DOESN"T ACCEPT, LIKES REV.1 PASSTOPASSMODE INSTEAD
+void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
+    try {
+        std::stringstream pdp_cmd;
+
+        pdp_cmd << "PDPMODE ";
+        if (mode == NORMAL)
+            pdp_cmd << "NORMAL ";
+        else if (mode == RELATIVE)
+            pdp_cmd << "RELATIVE ";
+        else {
+            log_error_("PDPModeConfigure() input 'mode'' is not valid!");
+            return;
+        }
+        if (dynamics == AUTO)
+            pdp_cmd << "AUTO";
+        else if (dynamics == STATIC)
+            pdp_cmd << "STATIC";
+        else if (dynamics == DYNAMIC)
+            pdp_cmd << "DYNAMIC";
+        else {
+            log_error_("PDPModeConfigure() input 'dynamics' is not valid!");
+            return;
+        }
+
+        bool result = SendCommand(pdp_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::PDPModeConfigure(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::SetPositionTimeout(uint32_t seconds){
+    try {
+        if(0<=seconds<=86400) {
+            std::stringstream pdp_cmd;
+            pdp_cmd << "POSTIMEOUT " << seconds;
+            bool result = SendCommand(pdp_cmd.str());
+        } else
+            log_error_("Seconds is not a valid value!");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetPositionTimeout(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+bool Novatel::SetInitialPosition(double latitude, double longitude, double height) {
+    std::stringstream pos_cmd;
+    pos_cmd << "SETAPPROXPOS " << latitude << " " << longitude << " " << height;
+    return SendCommand(pos_cmd.str());
+
+}
+
+bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
+    std::stringstream time_cmd;
+    time_cmd << "SETAPPROXTIME " << gps_week << " " << gps_seconds;
+    return SendCommand(time_cmd.str());
+}
+
+bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant) {
+    try {
+        std::stringstream smooth_cmd;
+        if ((2 >= l1_time_constant) || (l1_time_constant >= 2000)) {
+            log_error_("Error in SetCarrierSmoothing: l1_time_constant set to improper value.");
+            return false;
+        } else if ((5 >= l2_time_constant) || (l2_time_constant >= 2000)) {
+            log_error_("Error in SetCarrierSmoothing: l2_time_constant set to improper value.");
+            return false;
+        } else {
+            smooth_cmd << "CSMOOTH " << l1_time_constant << " " << l2_time_constant;
+        }
+        return SendCommand(smooth_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SetCarrierSmoothing(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
 bool Novatel::HardwareReset(uint8_t rst_delay) {
-	// Resets receiver to cold start, does NOT clear non-volatile memory!
-	std::stringstream rst_cmd;
-    rst_cmd << "RESET " << rst_delay;
-    return SendCommand(rst_cmd.str());
+    // Resets receiver to cold start, does NOT clear non-volatile memory!
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "RESET " << rst_delay;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::HardwareReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::HotStartReset() {
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "FRESET " << LAST_POSITION;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::HotStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::WarmStartReset() {
+    try {
+        std::stringstream rst_pos_cmd;
+        std::stringstream rst_time_cmd;
+        rst_pos_cmd << "FRESET " << LAST_POSITION;
+        bool pos_reset = SendCommand(rst_pos_cmd.str());
+        rst_time_cmd << "FRESET " << LBAND_TCXO_OFFSET ;
+        bool time_reset = SendCommand(rst_time_cmd.str());
+        return (pos_reset && time_reset);
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::WarmStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::ColdStartReset() {
+    try {
+        std::stringstream rst_cmd;
+        rst_cmd << "FRESET " << STANDARD;
+        return SendCommand(rst_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::ColdStartReset(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+void Novatel::SaveConfiguration() {
+    try {
+        bool result = SendCommand("SAVECONFIG");
+        if(result)
+            log_info_("Receiver configuration has been saved.");
+        else
+            log_error_("Failed to save receiver configuration!");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SaveConfiguration(): " << e.what();
+        log_error_(output.str());
+    }
 }
 
 void Novatel::ConfigureLogs(std::string log_string) {
@@ -344,6 +576,28 @@ void Novatel::ConfigureLogs(std::string log_string) {
 
 	}
 
+}
+
+void Novatel::Unlog(std::string log) {
+    try {
+        std::stringstream unlog_cmd;
+        unlog_cmd << "UNLOG " << log;
+        bool result = SendCommand(unlog_cmd.str());
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::Unlog(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void Novatel::UnlogAll() {
+    try {
+        bool result = SendCommand("UNLOGALL");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::UnlogAll(): " << e.what();
+        log_error_(output.str());
+    }
 }
 
 void Novatel::ConfigureInterfaceMode(std::string com_port,  
@@ -586,6 +840,8 @@ void Novatel::ReadSerialPort() {
 		// add data to the buffer to be parsed
 		BufferIncomingData(buffer, len);
 	}
+	
+
 }
 
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
@@ -596,7 +852,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 		// make sure bufIndex is not larger than buffer
 		if (buffer_index_ >= MAX_NOUT_SIZE) {
 			buffer_index_=0;
-      log_warning_("Overflowed receive buffer. Buffer cleared.");
+            log_warning_("Overflowed receive buffer. Buffer cleared.");
 		}
 
 		if (buffer_index_ == 0) {	// looking for beginning of message
@@ -632,6 +888,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				boost::lock_guard<boost::mutex> lock(ack_mutex_);
 				ack_received_ = true;
 				ack_condition_.notify_all();
+
 				// ACK received
 				handle_acknowledgement_();
 			} else {
@@ -672,8 +929,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 	}	// end for
 }
 
-void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id)
-{
+void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id) {
     //stringstream output;
     //output << "Parsing Log: " << message_id << endl;
     //log_debug_(output.str());
@@ -770,7 +1026,16 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case PSRDOPB_LOG_TYPE:
             Dop psr_dop;
-            memcpy(&psr_dop, message, sizeof(psr_dop));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated fields
+            memcpy(&psr_dop, message, header_length+24);
+            //Copy repeated fields
+            memcpy(&psr_dop.prn, message+header_length+28, (4*psr_dop.number_of_prns));
+            //Copy CRC
+            memcpy(&psr_dop.crc, message+header_length+payload_length, 4);
+
             if (pseudorange_dop_callback_)
             	pseudorange_dop_callback_(psr_dop, read_timestamp_);
             break;
@@ -794,8 +1059,16 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case RANGEB_LOG_TYPE:
             RangeMeasurements ranges;
-            memset(&ranges, 0, sizeof(ranges));
-            memcpy(&ranges, message, sizeof(ranges));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and #observations following
+            memcpy(&ranges, message, header_length+4);
+            //Copy repeated fields
+            memcpy(&ranges.range_data, message+header_length+4, (44*ranges.number_of_observations));
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
             if (range_measurements_callback_)
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
@@ -815,12 +1088,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	memcpy(&cmp_ranges.header,message, header_length);
 	        	memcpy(&cmp_ranges.number_of_observations, message+header_length, 4);
 	        	// Copy Repeated portion of message block)
-	        	// asdf << "\n PRN's : ";
-	        	for(int32_t index = 0; index < ((int32_t)*(message+header_length)); index++) { // Iterate number_of_observations times
-	        		memcpy(&cmp_ranges.range_data[index], message+header_length+4+(24*index), 24);
-	        		// asdf << cmp_ranges.range_data[index].range_record.satellite_prn << ", ";
-	        	}
-	        	// log_info_(asdf.str().c_str()); asdf.str("");
+                memcpy(&cmp_ranges.range_data, message+header_length+4, (24*cmp_ranges.number_of_observations));
 	        	// Copy the CRC
 	        	memcpy(&cmp_ranges.crc, message+header_length+payload_length, 4);
 	          
@@ -856,17 +1124,62 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	          }
             break;
         }
+        case RAWEPHEMB_LOG_TYPE:
+            RawEphemeris raw_ephemeris;
+            memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
+            if (raw_ephemeris_callback_)
+                raw_ephemeris_callback_(raw_ephemeris, read_timestamp_);
+            break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
-            memcpy(&sat_pos, message, sizeof(sat_pos));
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&sat_pos, message, header_length+12);
+            //Copy repeated fields
+            memcpy(&sat_pos.data, message+header_length+12, (68*sat_pos.number_of_satellites));
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
             if (satellite_positions_callback_)
             	satellite_positions_callback_(sat_pos, read_timestamp_);
+            break;
+        case SATVISB_LOG_TYPE:
+            SatelliteVisibility sat_vis;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&sat_pos, message, header_length+12);
+            //Copy repeated fields
+            memcpy(&sat_vis.data, message+header_length+12, (40*sat_vis.number_of_satellites));
+            //Copy CRC
+            memcpy(&ranges.crc, message+header_length+payload_length, 4);
+
+            if(satellite_visibility_callback_)
+                satellite_visibility_callback_(sat_vis, read_timestamp_);
             break;
         case TIMEB_LOG_TYPE:
             TimeOffset time_offset;
             memcpy(&time_offset, message, sizeof(time_offset));
             if (time_offset_callback_)
             	time_offset_callback_(time_offset, read_timestamp_);
+            break;
+        case TRACKSTATB_LOG_TYPE:
+            TrackStatus tracking_status;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            // Copy header and unrepeated part of message
+            memcpy(&tracking_status, message, header_length+16);
+            //Copy repeated fields
+            memcpy(&tracking_status.data, message+header_length+16, (40*tracking_status.number_of_channels));
+            //Copy CRC
+            memcpy(&tracking_status.crc, message+header_length+payload_length, 4);
+
+            if(tracking_status_callback_)
+                tracking_status_callback_(tracking_status, read_timestamp_);
             break;
         case RXHWLEVELSB_LOG_TYPE:
             ReceiverHardwareStatus hw_levels;
@@ -876,9 +1189,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case PSRPOSB_LOG_TYPE:
             Position psr_pos;
-            memset(&psr_pos, 0, sizeof(psr_pos));
             memcpy(&psr_pos, message, sizeof(psr_pos));
-            // log_info_()
             if (best_pseudorange_position_callback_)
             	best_pseudorange_position_callback_(psr_pos, read_timestamp_);
             break;
@@ -890,7 +1201,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         default:
             break;
-    }   
+    }
 }
 
 // this functions matches the conversion done by the Novatel receivers
