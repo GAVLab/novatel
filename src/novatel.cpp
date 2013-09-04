@@ -487,8 +487,11 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
 
 bool Novatel::InjectAlmanac(Almanac almanac) {
     try {
-
-
+        cout << "SIZEOF: " << sizeof(almanac) << endl;
+        uint8_t* msg_ptr = (unsigned char*)&almanac;
+        bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(almanac));
+        if(result)
+            cout << "Sent ALMANAC." << endl;
     } catch {
         std::stringstream output;
         output << "Error in Novatel::InjectAlmanac(): " << e.what();
