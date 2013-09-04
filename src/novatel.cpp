@@ -1170,8 +1170,9 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
                     gps_ephemeris_callback_(ephemeris, read_timestamp_);
             }
         }
-    case RAWEPHEMB_LOG_TYPE: {
+        case RAWEPHEMB_LOG_TYPE: {
             RawEphemeris raw_ephemeris;
+
             memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
 //            cout << "Parse Log:" << endl;
 //            cout << "Length: " << length << endl;
@@ -1184,6 +1185,36 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 //            bool result = SendBinaryDataToReceiver(message, length);
 
             break;}
+        case RAWALMB_LOG_TYPE:
+            RawAlmanac raw_almanac;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            //Copy header and unrepeated message block
+            memcpy(&raw_almanac.header,message, header_length+12);
+            // Copy Repeated portion of message block)
+            memcpy(&raw_almanac.subframe_data, message+header_length+12, (32*raw_almanac.num_of_subframes));
+            // Copy the CRC
+            memcpy(&raw_almanac.crc, message+header_length+payload_length, 4);
+
+            if(raw_almanac_callback_)
+                raw_almanac_callback_(raw_almanac, read_timestamp_);
+            break;
+        case ALMANACB_LOG_TYPE:
+            Almanac almanac;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            //Copy header and unrepeated message block
+            memcpy(&almanac.header,message, header_length+4);
+            // Copy Repeated portion of message block)
+            memcpy(&almanac.data, message+header_length+4, (112*almanac.number_of_prns));
+            // Copy the CRC
+            memcpy(&raw_almanac.crc, message+header_length+payload_length, 4);
+
+            if(almanac_callback_)
+                almanac_callback_(almanac, read_timestamp_);
+            break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
             header_length = (uint16_t) *(message+3);

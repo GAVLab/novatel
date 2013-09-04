@@ -750,9 +750,9 @@ struct GpsEphemeris
     uint32_t issue_of_data_clock;   //!< issue of data clock
     double sv_clock_correction;     //!< SV clock correction term (s)
     double group_delay_difference;  //!< estimated group delay difference
-    double clock_aligning_param_0;  //!< clock aiging parameter 0
-    double clock_aligning_param_1;  //!< clock aiging parameter 1
-    double clock_aligning_param_2;  //!< clock aiging parameter 2
+    double clock_aligning_param_0;  //!< clock aging parameter 0
+    double clock_aligning_param_1;  //!< clock aging parameter 1
+    double clock_aligning_param_2;  //!< clock aging parameter 2
     yes_no anti_spoofing;           //!< anti spoofing on
     double corrected_mean_motion;   //!< corrected mean motion
     double range_accuracy_variance; //!< user range accuracy variance
@@ -799,6 +799,40 @@ struct RawAlmanac
 	uint32_t ref_time;			// [sec]
 	uint32_t num_of_subframes;	// numbers of subframes to follow
 	RawAlmanacData subframe_data;
+	uint8_t crc[4];
+
+});
+
+/*!
+ * ALMANAC
+ * Contains decoded almanac parameters from Subframes 4 and 5 with parity 
+ * info removed.
+ */
+PACK(
+struct AlmanacData {
+	uint32_t prn;
+	uint32_t ref_week;
+	double ref_time;					//!< [sec]
+	double eccentricity;			
+	double right_ascension_rate;		//!< [rad/sec]
+	double right_ascension;				//!< [rad]
+	double perigee;						//!< [rad]
+	double mean_anomoly_of_ref_time;	//!< [rad]
+	double clock_aging_param_0;			//!< [sec]
+	double clock_aging_param_1;			//!< [sec/sec]
+	double corrected_mean_motion;		//!< [rad/sec]
+	double semi_major_axis;				//!< [m]
+	double inclination_angle;			//!< [rad] Angle of inclination relative to .3*pi
+	uint32_t sv_configuration;			//!< 
+	uint32_t sv_health;					//!< (6 bits) From Page 25 of subframe 4 or 5
+	uint32_t sv_health_from_almanac;	//!< (8 bits) 
+	true_false anti_spoofing;			//!< 
+});
+PACK(
+struct Almanac {
+	Oem4BinaryHeader header;
+	int32_t number_of_prns;
+	AlmanacData data[MAX_NUM_SAT];
 	uint8_t crc[4];
 
 });

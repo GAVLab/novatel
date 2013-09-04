@@ -90,6 +90,8 @@ typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCall
 typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
 typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
+typedef boost::function<void(RawAlmanac&, double&)> RawAlmanacCallback;
+typedef boost::function<void(Almanac&, double&)> AlmanacCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
 typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
@@ -306,6 +308,10 @@ public:
         gps_ephemeris_callback_=handler;};
     void set_raw_ephemeris_callback(RawEphemerisCallback handler){
         raw_ephemeris_callback_=handler;};
+    void set_raw_almanc_callback(RawAlmanacCallback handler){
+        raw_almanac_callback_=handler;};
+    void set_almanac_callback(AlmanacCallback handler){
+        almanac_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
     void set_satellite_visibility_callback(SatelliteVisibilityCallback handler){
@@ -421,6 +427,8 @@ private:
     CompressedRangeMeasurementsCallback compressed_range_measurements_callback_;
     GpsEphemerisCallback gps_ephemeris_callback_;
     RawEphemerisCallback raw_ephemeris_callback_;
+    AlmanacCallback almanac_callback_;
+    RawAlmanacCallback raw_almanac_callback_;
     SatellitePositionsCallback satellite_positions_callback_;
     SatelliteVisibilityCallback satellite_visibility_callback_;
     TimeOffsetCallback time_offset_callback_;
