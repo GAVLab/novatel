@@ -2,6 +2,7 @@
 #include <iostream>
 #include <valarray>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 using namespace std;
@@ -64,10 +65,19 @@ double DefaultGetTime() {
 	return (double)(duration.total_milliseconds())/1000.0;
 }
 
+inline void SaveMessageToFile(unsigned char *message, size_t length, const char *filename) {
+    ofstream outfile;
+    outfile.open(filename, ios::out | ios::app); // "./test_data/filename.txt"
+    if(outfile.is_open()) {
+        for (int index =0; index < length; index++) {
+            outfile << message[index];
+        }
+    }
+    outfile.close();
+}
 
 
-
-inline void printHex(char *data, int length) {
+inline void printHex(unsigned char *data, int length) {
   for (int i = 0; i < length; ++i) {
     printf("0x%X ", (unsigned) (unsigned char) data[i]);
   }
@@ -113,12 +123,20 @@ inline void DefaultErrorMsgCallback(const std::string &msg) {
     std::cout << "Novatel Error: " << msg << std::endl;
 }
 
-void DefaultBestPositionCallback(Position best_position, double time_stamp){
+inline void DefaultBestPositionCallback(Position best_position, double time_stamp){
     std:: cout << "BESTPOS: \nGPS Week: " << best_position.header.gps_week <<
                   "  GPS milliseconds: " << best_position.header.gps_millisecs << std::endl <<
                   "  Latitude: " << best_position.latitude << std::endl <<
                   "  Longitude: " << best_position.longitude << std::endl <<
-                  "  Height: " << best_position.height << std::endl << std::endl;
+                  "  Height: " << best_position.height << std::endl << std::endl <<
+                  "  Solution status: " << best_position.solution_status << std::endl <<
+                  "  position type: " << best_position.position_type << std::endl <<
+                  "  number of svs tracked: " << (double)best_position.number_of_satellites << std::endl <<
+                  "  number of svs used: " << (double)best_position.number_of_satellites_in_solution << std::endl;
+}
+
+inline void DefaultRawEphemCallback(RawEphemeris ephemeris, double time_stamp) {
+    std::cout << "Got RAWEPHEM for PRN " << ephemeris.prn << std::endl;
 }
 
 Novatel::Novatel() {
@@ -127,6 +145,7 @@ Novatel::Novatel() {
 	time_handler_ = DefaultGetTime;
     handle_acknowledgement_=DefaultAcknowledgementHandler;
     best_position_callback_=DefaultBestPositionCallback;
+    raw_ephemeris_callback_=DefaultRawEphemCallback;
     log_debug_=DefaultDebugMsgCallback;
     log_info_=DefaultInfoMsgCallback;
     log_warning_=DefaultWarningMsgCallback;
@@ -149,9 +168,10 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 
 	if (!connected && search) {
 		// search additional baud rates
-		int bauds_to_search[5]={9600,19200,38400,57600,115200};
+
+        int bauds_to_search[9]={1200,2400,4800,9600,19200,38400,57600,115200,230400};
 		bool found = false;
-		for (int ii=0; ii<5; ii++){
+        for (int ii=0; ii<9; ii++){
 			std::stringstream search_msg;
 			search_msg << "Searching for receiver with baudrate: " << bauds_to_search[ii];
 			log_info_(search_msg.str());
@@ -166,7 +186,7 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 		if (found) {
 			// change baud rate to selected value
 			std::stringstream cmd;
-			cmd << "COM " << baudrate << "\r\n";
+            cmd << "COM THISPORT " << baudrate << "\r\n";
 			std::stringstream baud_msg;
 			baud_msg << "Changing receiver baud rate to " << baudrate;
 			log_info_(baud_msg.str());
@@ -316,20 +336,75 @@ bool Novatel::Ping(int num_attempts) {
 
 }
 
-bool Novatel::SendCommand(std::string cmd_msg) {
+void Novatel::SendRawEphemeridesToReceiver(RawEphemerides raw_ephemerides) {
+    try{
+    for(uint8_t index=0;index<MAX_NUM_SAT; index++){
+        cout << "SIZEOF: " << sizeof(raw_ephemerides.ephemeris[index]) << endl;
+        if(sizeof(raw_ephemerides.ephemeris[index]) == 106+HEADER_SIZE) {
+            uint8_t* msg_ptr = (unsigned char*)&raw_ephemerides.ephemeris[index];
+            bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(raw_ephemerides.ephemeris[index]));
+            if(result)
+                cout << "Sent RAWEPHEM for PRN " << (double)raw_ephemerides.ephemeris[index].prn << endl;
+        }
+    }
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SendRawEphemeridesToReceiver(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+bool Novatel::SendBinaryDataToReceiver(uint8_t* msg_ptr, size_t length) {
+
+    try {
+        stringstream output1;
+        std::cout << length << std::endl;
+        std::cout << "Message Pointer" << endl;
+        printHex((unsigned char*) msg_ptr, length);
+        size_t bytes_written;
+
+        if ((serial_port_!=NULL)&&(serial_port_->isOpen())) {
+            bytes_written=serial_port_->write(msg_ptr, length);
+        } else {
+            log_error_("Unable to send message. Serial port not open.");
+            return false;
+        }
+        // check that full message was sent to serial port
+        if (bytes_written == length) {
+            return true;
+        } else {
+            log_error_("Full message was not sent over serial port.");
+            output1 << "Attempted to send " << length << "bytes. " << bytes_written << " bytes sent.";
+            log_error_(output1.str());
+            return false;
+        }
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in Novatel::SendBinaryDataToReceiver(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
+bool Novatel::SendCommand(std::string cmd_msg, bool wait_for_ack) {
 	try {
 		// sends command to GPS receiver
         serial_port_->write(cmd_msg + "\r\n");
 		// wait for acknowledgement (or 2 seconds)
-		boost::mutex::scoped_lock lock(ack_mutex_);
-		boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
-		if (ack_condition_.timed_wait(lock,timeout)) {
-      log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
-			return true;
-		} else {
-            log_error_("Command '" + cmd_msg + "' failed.");
-			return false;
-		}
+        if(wait_for_ack) {
+            boost::mutex::scoped_lock lock(ack_mutex_);
+            boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(2000);
+            if (ack_condition_.timed_wait(lock,timeout)) {
+                log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
+                return true;
+            } else {
+                log_error_("Command '" + cmd_msg + "' failed.");
+                return false;
+            }
+        } else {
+            log_info_("Command `" + cmd_msg + "` sent to GPS receiver.");
+            return true;
+        }
 	} catch (std::exception &e) {
 		std::stringstream output;
         output << "Error in Novatel::SendCommand(): " << e.what();
@@ -448,6 +523,23 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     return SendCommand(time_cmd.str());
 }
 
+bool Novatel::InjectAlmanac(Almanac almanac) {
+    try {
+        cout << "SIZEOF: " << sizeof(almanac) << endl;
+        uint8_t* msg_ptr = (unsigned char*)&almanac;
+        bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(almanac));
+        if(result) {
+            cout << "Sent ALMANAC." << endl;
+            return true;
+        }
+    } catch (std::exception &e){
+        std::stringstream output;
+        output << "Error in Novatel::InjectAlmanac(): " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
 bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant) {
     try {
         std::stringstream smooth_cmd;
@@ -469,12 +561,12 @@ bool Novatel::SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_co
     }
 }
 
-bool Novatel::HardwareReset(uint8_t rst_delay) {
+bool Novatel::HardwareReset() {
     // Resets receiver to cold start, does NOT clear non-volatile memory!
     try {
         std::stringstream rst_cmd;
-        rst_cmd << "RESET " << rst_delay;
-        return SendCommand(rst_cmd.str());
+        rst_cmd << "RESET";
+        return SendCommand(rst_cmd.str(),false);
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::HardwareReset(): " << e.what();
@@ -486,8 +578,8 @@ bool Novatel::HardwareReset(uint8_t rst_delay) {
 bool Novatel::HotStartReset() {
     try {
         std::stringstream rst_cmd;
-        rst_cmd << "FRESET " << LAST_POSITION;
-        return SendCommand(rst_cmd.str());
+        rst_cmd << "RESET";
+        return SendCommand(rst_cmd.str(),false);
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::HotStartReset(): " << e.what();
@@ -500,10 +592,10 @@ bool Novatel::WarmStartReset() {
     try {
         std::stringstream rst_pos_cmd;
         std::stringstream rst_time_cmd;
-        rst_pos_cmd << "FRESET " << LAST_POSITION;
-        bool pos_reset = SendCommand(rst_pos_cmd.str());
-        rst_time_cmd << "FRESET " << LBAND_TCXO_OFFSET ;
-        bool time_reset = SendCommand(rst_time_cmd.str());
+        rst_pos_cmd << "FRESET " << LAST_POSITION;  //!< FRESET doesn't reply with an ACK
+        bool pos_reset = SendCommand(rst_pos_cmd.str(),false);
+        rst_time_cmd << "FRESET " << LBAND_TCXO_OFFSET ; //!< FRESET doesn't reply with an ACK
+        bool time_reset = SendCommand(rst_time_cmd.str(),false);
         return (pos_reset && time_reset);
     } catch (std::exception &e) {
         std::stringstream output;
@@ -516,8 +608,10 @@ bool Novatel::WarmStartReset() {
 bool Novatel::ColdStartReset() {
     try {
         std::stringstream rst_cmd;
-        rst_cmd << "FRESET " << STANDARD;
-        return SendCommand(rst_cmd.str());
+        rst_cmd << "FRESET STANDARD";
+        bool result = SendCommand(rst_cmd.str(),false); //!< FRESET doesn't reply with an ACK
+        sleep(5);
+        return result;
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::ColdStartReset(): " << e.what();
@@ -592,7 +686,7 @@ void Novatel::Unlog(std::string log) {
 
 void Novatel::UnlogAll() {
     try {
-        bool result = SendCommand("UNLOGALL");
+        bool result = SendCommand("UNLOGALL THISPORT");
     } catch (std::exception &e) {
         std::stringstream output;
         output << "Error in Novatel::UnlogAll(): " << e.what();
@@ -681,7 +775,7 @@ bool Novatel::UpdateVersion()
 			if (ParseVersion(packets[ii])) {
 				return true;
 			}
-		} 
+        }
 	} catch (std::exception &e) {
         std::stringstream output;
         output << "Error reading version info from receiver: " << e.what();
@@ -846,6 +940,8 @@ void Novatel::ReadSerialPort() {
 
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
+//    cout << "BUFFERINCOMINGDATA: " << endl;
+//    printHex(message,length);
 	BINARY_LOG_TYPE message_id;
 	// add incoming data to buffer
 	for (unsigned int ii=0; ii<length; ii++) {
@@ -881,7 +977,8 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 		} else if (buffer_index_ == 2) {	// verify 3rd character of header
 			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
-			} else if ( (message[ii] == 'K') && (reading_acknowledgement_) ) {
+            } else if ( (message[ii-1]=='O')&&(message[ii] == 'K') && (reading_acknowledgement_) ) {
+                log_info_("RECEIVED AN ACK.");
 				// final byte of acknowledgement received
 				buffer_index_ = 0;
 				reading_acknowledgement_ = false;
@@ -1111,24 +1208,67 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
           }
         case GPSEPHEMB_LOG_TYPE: {
             GpsEphemeris ephemeris;
+            header_length = (uint16_t) *(message+3);
+            std::cout << "GPSEPHEMB message: " << std::endl
+                  << "PRN #: " << (double)*(message+header_length)<< std::endl;
+            //printHex(message, length);
             if (length>sizeof(ephemeris)) {
-            	std::stringstream ss;
-            	ss << "Novatel Driver: GpsEphemeris mismatch\n";
-            	ss << "\tlength = " << length << "\n";
-	            ss << "\tsizeof msg = " << sizeof(ephemeris);
-	            log_warning_(ss.str().c_str());
-	          } else {
-	            memcpy(&ephemeris, message, sizeof(ephemeris));
-	            if (gps_ephemeris_callback_)
-	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
-	          }
-            break;
+                std::stringstream ss;
+                ss << "Novatel Driver: GpsEphemeris mismatch\n";
+                ss << "\tlength = " << length << "\n";
+                ss << "\tsizeof msg = " << sizeof(ephemeris);
+                log_warning_(ss.str().c_str());
+            } else {
+                memcpy(&ephemeris, message, sizeof(ephemeris));
+//                printHex((char)*ephemeris,sizeof(ephemeris));
+                if (gps_ephemeris_callback_)
+                    gps_ephemeris_callback_(ephemeris, read_timestamp_);
+            }
         }
-        case RAWEPHEMB_LOG_TYPE:
+        case RAWEPHEMB_LOG_TYPE: {
             RawEphemeris raw_ephemeris;
+
             memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
+//            cout << "Parse Log:" << endl;
+//            cout << "Length: " << length << endl;
+//            printHex(message, length);
+//            test_ephems_.ephemeris[raw_ephemeris.prn] = raw_ephemeris;
+
             if (raw_ephemeris_callback_)
                 raw_ephemeris_callback_(raw_ephemeris, read_timestamp_);
+
+//            bool result = SendBinaryDataToReceiver(message, length);
+
+            break;}
+        case RAWALMB_LOG_TYPE:
+            RawAlmanac raw_almanac;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            //Copy header and unrepeated message block
+            memcpy(&raw_almanac.header,message, header_length+12);
+            // Copy Repeated portion of message block)
+            memcpy(&raw_almanac.subframe_data, message+header_length+12, (32*raw_almanac.num_of_subframes));
+            // Copy the CRC
+            memcpy(&raw_almanac.crc, message+header_length+payload_length, 4);
+
+            if(raw_almanac_callback_)
+                raw_almanac_callback_(raw_almanac, read_timestamp_);
+            break;
+        case ALMANACB_LOG_TYPE:
+            Almanac almanac;
+            header_length = (uint16_t) *(message+3);
+            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+
+            //Copy header and unrepeated message block
+            memcpy(&almanac.header,message, header_length+4);
+            // Copy Repeated portion of message block)
+            memcpy(&almanac.data, message+header_length+4, (112*almanac.number_of_prns));
+            // Copy the CRC
+            memcpy(&raw_almanac.crc, message+header_length+payload_length, 4);
+
+            if(almanac_callback_)
+                almanac_callback_(almanac, read_timestamp_);
             break;
         case SATXYZB_LOG_TYPE:
             SatellitePositions sat_pos;
@@ -1202,6 +1342,41 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         default:
             break;
     }
+}
+
+/* --------------------------------------------------------------------------
+Calculate a CRC value to be used by CRC calculation functions.
+-------------------------------------------------------------------------- */
+unsigned long Novatel::CRC32Value(int i)
+{
+  int j;
+  unsigned long ulCRC;
+  ulCRC = i;
+  for ( j = 8 ; j > 0; j-- ) {
+    if ( ulCRC & 1 )
+      ulCRC = ( ulCRC >> 1 ) ^ CRC32_POLYNOMIAL;
+    else
+      ulCRC >>= 1;
+  }
+    return ulCRC;
+}
+
+
+/* --------------------------------------------------------------------------
+Calculates the CRC-32 of a block of data all at once
+-------------------------------------------------------------------------- */
+unsigned long Novatel::CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
+                                             unsigned char *ucBuffer ) /* Data block */
+{
+  unsigned long ulTemp1;
+  unsigned long ulTemp2;
+  unsigned long ulCRC = 0;
+  while ( ulCount-- != 0 ) {
+    ulTemp1 = ( ulCRC >> 8 ) & 0x00FFFFFFL;
+    ulTemp2 = CRC32Value( ((int) ulCRC ^ *ucBuffer++ ) & 0xff );
+    ulCRC = ulTemp1 ^ ulTemp2;
+  }
+  return( ulCRC );
 }
 
 // this functions matches the conversion done by the Novatel receivers

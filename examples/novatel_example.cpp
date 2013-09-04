@@ -34,10 +34,32 @@ int main(int argc, char **argv)
         cout << "Failed to connect." << endl;
         return 0;
     }
+//    my_gps.UnlogAll();
+//    sleep(2);
+    my_gps.ConfigureLogs("BESTPOSB ONTIME 1.0");
+//    sleep(30);
+//    my_gps.ConfigureLogs("GPSEPHEMB ONCHANGED");
+//    my_gps.SaveConfiguration();
+//    sleep(3);
+//    my_gps.HardwareReset();
+//    cout << "COLD START RESET: " << endl;
+//    my_gps.ColdStartReset();
+//    sleep(3);
+//    my_gps.ConfigureLogs("GPSEPHEMB ONCE");
+//    sleep(4);
+//    my_gps.SendRawEphemeridesToReceiver(my_gps.test_ephems_);
+//    sleep(2);
+//    my_gps.ConfigureLogs("GPSEPHEMB ONCE");
+//    my_gps.SaveConfiguration();
+//    sleep(2);
 
-    //while(1);
+//    my_gps.ConfigureLogs("BESTPOSB ONTIME 1.0;GPSEPHEMB ONCE");
 
-    my_gps.Disconnect();
+
+
+    while(1);
+
+//    my_gps.Disconnect();
 
     return 0;
 }
