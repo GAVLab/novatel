@@ -1,31 +1,31 @@
 <launch>
-	<!-- Start the novatel node -->
-	<node pkg="novatel" type="novatel_node" name="novatel_node" output="screen" 
-	    required="true">
-	    <!-- Configure how to connect to the novatel -->
-	    <param name="port" value="/dev/ttyUSB0"/>
-		<param name="baudrate" value="115200" />
+  <!-- Start the novatel node -->
+  <node pkg="novatel" type="novatel_node" name="novatel_node" output="screen" 
+      required="true">
+      <!-- Configure how to connect to the novatel -->
+      <param name="port" value="/dev/ttyUSB0"/>
+    <param name="baudrate" value="115200" />
 
-		<!-- Commands for ports not connected to the present roscore -->
-		<!-- <param name="configure_port" value="COM2,9600,RTCM,NONE" /> -->
+    <!-- Commands for ports not connected to the present roscore -->
+    <!-- <param name="configure_port" value="COM2,9600,RTCM,NONE" /> -->
 
-		<!-- Remapping arguments are not used in this driver -->
-		<param name="odom_topic" value="/gps_odom" />
-		<param name="ephemeris_topic" value="/novatel_ephem" />
-		<param name="dual_band_range_topic" value="/novatel_range" />
-		
-		<param name="log_commands" value="" />
-		<!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
+    <!-- Remapping arguments are not used in this driver -->
+    <param name="odom_topic" value="/gps_odom" />
+    <param name="ephemeris_topic" value="/novatel_ephem" />
+    <param name="dual_band_range_topic" value="/novatel_range" />
+    
+    <param name="log_commands" value="" />
+    <!-- <param name="log_commands" value="BESTUTMB ONTIME 1.0; BESTVELB ONTIME 1.0" /> -->
 
-		<!-- Logs periods are in seconds -->
-		<param name="gps_default_logs_period" value="1.0" />
-		<param name="span_default_logs_period" value="0" />
-		<param name="range_default_logs_period" value="1.0" />
-		<param name="psrpos_default_logs_period" value="1.0 " />
+    <!-- Logs periods are in seconds -->
+    <param name="gps_default_logs_period" value="1.0" />
+    <param name="span_default_logs_period" value="0" />
+    <param name="range_default_logs_period" value="1.0" />
+    <param name="psrpos_default_logs_period" value="1.0 " />
 
-		<!-- true/false to log ephem ONNEW -->
-		<param name="ephem_log" value="true" />
-	</node>
+    <!-- true/false to log ephem ONNEW -->
+    <param name="ephem_log" value="true" />
+  </node>
 
 </launch>
 

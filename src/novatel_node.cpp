@@ -104,6 +104,8 @@ public:
   void BestUtmHandler(UtmPosition &pos, double &timestamp) {
     ROS_DEBUG("Received BestUtm");
 
+    cur_utm_bestpos_ = pos;
+
     sensor_msgs::NavSatFix sat_fix;
     sat_fix.header.stamp = ros::Time::now();
     sat_fix.header.frame_id = "/odom";
@@ -134,11 +136,10 @@ public:
     else
       sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
 
-    // TODO: convert positon to lat, long, alt to export
+    // TODO: convert positon to lat, long, alt to export (this is available from PSRPOS)
 
     // TODO: add covariance
     // covariance is east,north,up in row major form
-
 
     sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
@@ -185,7 +186,6 @@ public:
         cur_odom_.twist.covariance[0] = DBL_MAX;
         cur_odom_.twist.covariance[7] = DBL_MAX;
       }
-
     }
 
     odom_publisher_.publish(cur_odom_);
@@ -237,8 +237,6 @@ public:
           ins_pva.pitch*degrees_to_radians,
           psi2theta(ins_pva.azimuth*degrees_to_radians));
 
-    //cur_odom_->pose.covariance[0] = 
-
     cur_odom_.twist.twist.linear.x=ins_pva.east_velocity;
     cur_odom_.twist.twist.linear.y=ins_pva.north_velocity;
     cur_odom_.twist.twist.linear.z=ins_pva.up_velocity;
@@ -288,7 +286,6 @@ public:
 
 
   void InsCovHandler(InsCovariance &cov, double &timestamp) {
-     //ROS_INFO("Received inscov.");
      cur_ins_cov_ = cov;
   }
 
@@ -297,7 +294,6 @@ public:
 
 
   void EphemerisHandler(GpsEphemeris &ephem, double &timestamp) {
-    // ROS_DEBUG("Received GpsEphemeris");
     cur_ephem_.header.stamp = ros::Time::now();
     cur_ephem_.gps_time = ephem.header.gps_millisecs*1000;
     cur_ephem_.obs = 1;
@@ -332,19 +328,11 @@ public:
 
 
   void CompressedRangeHandler(CompressedRangeMeasurements &range, double &timestamp) {
-    // ROS_INFO_STREAM("CompressedRangeHandler");
     gps_msgs::L1L2Range cur_range_;
     cur_range_.header.stamp = ros::Time::now();
     cur_range_.gps_time = range.header.gps_millisecs;
     uint8_t L1_obs = 0, L2_obs = 0;
-    // uint8_t m1 = 0, m2=0; // m is output index (compress to front)
-    // ROS_INFO_STREAM("Num Obs: " << range.number_of_observations);
     cur_range_.num_obs = range.number_of_observations;
-    // ROS_INFO_STREAM("Received numobs: " << range.number_of_observations);
-
-    // std::ofstream outfile;
-    // outfile.open("/home/cerdec/convoy_ws/data/output.txt");
-    // outfile.write( (CompressedRangeMeasurements*) range, sizeof(range));
 
     for (int n=0; n<range.number_of_observations; n++) { //! FIXME how far should this iterate?
       // printf("%i ",n);
@@ -355,27 +343,12 @@ public:
         || (range.range_data[n].range_record.satellite_prn > 33) // critical
         )
       {
-        // ROS_INFO_STREAM("Skipping PRN "<< std::hex << range.range_data[n].range_record.satellite_prn);
-        // if (range.range_data[n].channel_status.satellite_sys != 0) {
-        //   // ROS_INFO_STREAM("Received non-GPS satellite "<< range.range_data[n].channel_status.satellite_sys);
-        // }
         continue;
       }
-      // printf("checked ");
-      // outfile << "n = " << n << "\n";
-      // outfile << "\tprn     = " << range.range_data[n].range_record.satellite_prn << "\n";
-      // outfile << "\tpsr     = " << range.range_data[n].range_record.pseudorange/128. << "\n";
-      // outfile << "\tpsr_std = " << range.range_data[n].range_record.pseudorange_standard_deviation << "\n";
-      // outfile << "\tdoppler = " << range.range_data[n].range_record.doppler/256. << "\n";
-      // outfile << "\tcno     = " << range.range_data[n].range_record.carrier_to_noise + 20. << "\n";
-      // outfile << "\tadr     = " << range.range_data[n].range_record.accumulated_doppler/256. << "\n";
-      // outfile << "\tadr_std = " << range.range_data[n].range_record.accumulated_doppler_std_deviation << "\n"; // << "\n"
-      // printf("printed \n");
+
       uint8_t prn_idx = range.range_data[n].range_record.satellite_prn;
       switch (range.range_data[n].channel_status.signal_type) {
         case 0: // L1 C/A
-          // ROS_INFO_STREAM("")
-          // cur_range_.L1.prn[m1] = range.range_data[n].range_record.satellite_prn;
           cur_range_.L1.prn[prn_idx] = prn_idx;
           cur_range_.L1.psr[prn_idx] = range.range_data[n].range_record.pseudorange/128.;
           cur_range_.L1.psr_std[prn_idx] = range.range_data[n].range_record.pseudorange_standard_deviation; // FIXME scale factor?
@@ -384,7 +357,6 @@ public:
           cur_range_.L1.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.; // negative sign is critical!!!
           cur_range_.L1.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L1_obs++;
-          // m1++;
           break;
         case 5: // L2 P
         case 9: // L2 P codeless
@@ -397,37 +369,70 @@ public:
           cur_range_.L2.carrier.phase[prn_idx] = -range.range_data[n].range_record.accumulated_doppler/256.; // negative sign is critical!!!
           cur_range_.L2.carrier.phase_std[prn_idx] = range.range_data[n].range_record.accumulated_doppler_std_deviation; // FIXME scale factor?
           L2_obs++;
-          // m2++;
           break;
         default:
           ROS_INFO_STREAM(name_ << ": L1L2RangeHandler: Unhandled signal type " << range.range_data[n].channel_status.signal_type);
           break;
       }
     }
-    
-    // outfile.close();
-    
+        
     cur_range_.L1.obs = L1_obs;
     cur_range_.L2.obs = L2_obs;
-    cur_range_.lat = cur_lla_[0];
-    cur_range_.lon = cur_lla_[1];
-    cur_range_.alt = cur_lla_[2];
-    // cur_range_.lat_cov = pow(cur_lla_std_[0], 2);
-    // cur_range_.lon_cov = pow(cur_lla_std_[1], 2);
-    // cur_range_.alt_cov = pow(cur_lla_std_[2], 2);
+    // change this to be populated by bestpos
+    cur_range_.lat = cur_psrpos_.latitude;
+    cur_range_.lon = cur_psrpos_.longitude;
+    cur_range_.alt = cur_psrpos_.height;
+    // !FIXME - convert these codes to actual values and populate fields
+    // cur_range_.lat_cov = pow(cur_psr_lla_std_[0], 2);
+    // cur_range_.lon_cov = pow(cur_psr_lla_std_[1], 2);
+    // cur_range_.alt_cov = pow(cur_psr_lla_std_[2], 2);
 
     dual_band_range_publisher_.publish(cur_range_);
-    // printf("published\n");
   }
 
 
   void PsrPosHandler(Position &pos, double timestamp) {
-    cur_lla_[0] = pos.latitude;
-    cur_lla_[1] = pos.longitude;
-    cur_lla_[2] = pos.height;
-    cur_lla_std_[0] = pos.latitude_standard_deviation;
-    cur_lla_std_[1] = pos.longitude_standard_deviation;
-    cur_lla_std_[2] = pos.height_standard_deviation;
+    cur_psrpos_ = pos;
+
+    sensor_msgs::NavSatFix sat_fix;
+    
+    if (pos.position_type == NONE)
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+    else if ((pos.position_type == WAAS) || 
+             (pos.position_type == OMNISTAR) ||   
+             (pos.position_type == OMNISTAR_HP) || 
+             (pos.position_type == OMNISTAR_XP) || 
+             (pos.position_type == CDGPS))
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_SBAS_FIX;
+    else if ((pos.position_type == PSRDIFF) || 
+             (pos.position_type == NARROW_FLOAT) ||   
+             (pos.position_type == WIDE_INT) ||     
+             (pos.position_type == WIDE_INT) ||     
+             (pos.position_type == NARROW_INT) ||     
+             (pos.position_type == RTK_DIRECT_INS) ||     
+             (pos.position_type == INS_PSRDIFF) ||    
+             (pos.position_type == INS_RTKFLOAT) ||   
+             (pos.position_type == INS_RTKFIXED))
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
+     else 
+      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+
+    if (pos.signals_used_mask & 0x30)
+      sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GLONASS;
+    else
+      sat_fix.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS;
+
+    sat_fix.header.stamp = ros::Time::now();
+    sat_fix.header.frame_id = "/lla";
+    sat_fix.latitude = pos.latitude;
+    sat_fix.longitude = pos.longitude;
+    sat_fix.altitude = pos.height;
+    sat_fix.position_covariance[0] = pow(cur_utm_bestpos_.easting_standard_deviation, 2);
+    sat_fix.position_covariance[4] = pow(cur_utm_bestpos_.northing_standard_deviation, 2);
+    sat_fix.position_covariance[8] = pow(cur_utm_bestpos_.height_standard_deviation, 2);
+
+    psrpos_publisher_.publish(sat_fix);
+
   }
 
 
@@ -443,8 +448,10 @@ public:
 
     this->odom_publisher_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_,0);
     this->nav_sat_fix_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(nav_sat_fix_topic_,0);
+    // ! FIXME - only advertise ephem/range if going to publish it.
     this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
     this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::L1L2Range>(dual_band_range_topic_,0);
+    this->psrpos_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(psrpos_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -473,14 +480,10 @@ public:
     gps_.ConfigureLogs(default_logs.str());
     }
 
-    // FIXME. please.
-    // configure logging of ephemeris
-    if (ephem_log_) {
-      // std::stringstream default_logs;
-      // default_logs << "GPSEPHEMB ONNEW";
-      // default_logs << "GPSEPHEMB ONTIME 0.5";
-      // gps_.ConfigureLogs(default_logs.str());
-      gps_.ConfigureLogs("GPSEPHEMB ONTIME 0.5");
+    if (!ephem_log_.empty()) {
+      std::stringstream default_logs;
+      default_logs << "GPSEPHEMB " << std::fixed << ephem_log_;
+      gps_.ConfigureLogs(default_logs.str());
     }
 
     if (range_default_logs_period_>0) {
@@ -535,19 +538,7 @@ public:
 
     }
 
-    // Ros Spinner
-    if (!ephem_log_) {
-      // get an ephemeris blast for a little bit, then only on new.
-      for (uint8_t n=0; n<5; n++) {
-        ros::spinOnce();
-        boost::this_thread::sleep( boost::posix_time::milliseconds(500) );
-        gps_.ConfigureLogs("GPSEPHEMB ONTIME 0");
-        gps_.ConfigureLogs("GPSEPHEMB ONNEW");
-      }
-      ros::spin();
-    } else
-      ros::spin();
-
+    ros::spin();
 
   } // function
 
@@ -593,14 +584,18 @@ protected:
     nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
     ROS_INFO_STREAM(name_ << ": Default SPAN logs period: " << span_default_logs_period_);
 
-    nh_.param("ephem_log", ephem_log_, false);
-    ROS_INFO_STREAM(name_ << ": Ephemeris logging enabled: " << ephem_log_);
+    nh_.param("ephem_log", ephem_log_, std::string(""));
+    if (!ephem_log_.empty())
+      ROS_INFO_STREAM(name_ << ": Ephemeris logging enabled: " << ephem_log_);
 
     nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
     ROS_INFO_STREAM(name_ << ": Default Range logs period: " << range_default_logs_period_);
 
     nh_.param("psrpos_default_logs_period", psrpos_default_logs_period_, 0.05);
     ROS_INFO_STREAM(name_ << ": Default Pseudorange Position logs period: " << psrpos_default_logs_period_);
+
+    nh_.param("psrpos_topic", psrpos_topic_, std::string("gps_fix_psr"));
+    ROS_INFO_STREAM(name_ << ": Pseudorange Position Topic: " << psrpos_topic_);
 
     return true;
   }
@@ -614,12 +609,17 @@ protected:
   ros::Publisher nav_sat_fix_publisher_;
   ros::Publisher ephemeris_publisher_;
   ros::Publisher dual_band_range_publisher_;
+  ros::Publisher psrpos_publisher_;
 
-  Novatel gps_;
+  Novatel gps_; //
+
+  // topics - why are we not using remap arguments?
   std::string odom_topic_;
   std::string nav_sat_fix_topic_;
   std::string ephemeris_topic_;
   std::string dual_band_range_topic_;
+  std::string psrpos_topic_;
+
   std::string port_;
   std::string log_commands_;
   std::string configure_port_;
@@ -627,7 +627,7 @@ protected:
   double span_default_logs_period_;
   double range_default_logs_period_;
   double psrpos_default_logs_period_;
-  bool ephem_log_;
+  std::string ephem_log_;
   int baudrate_;
   double poll_rate_;
 
@@ -635,12 +635,17 @@ protected:
   // InsCovarianceShort cur_ins_cov_;
   gps_msgs::Ephemeris cur_ephem_;
   gps_msgs::L1L2Range cur_range_;
-  double cur_lla_[3];
-  double cur_lla_std_[3];
-
   InsCovariance cur_ins_cov_;
+  Position cur_psrpos_;
+  UtmPosition cur_utm_bestpos_;
 
-};
+  // holders for data common to multiple messages
+  // double cur_psr_lla_[3];
+  // double cur_psr_lla_std_[3];
+  // double cur_utm_[3];
+  // double cur_utm_std_[3];
+
+}; // end class NovatelNode
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "novatel_node");

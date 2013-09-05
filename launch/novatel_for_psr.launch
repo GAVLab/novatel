@@ -1,0 +1,40 @@
+<launch>
+
+  <node pkg="novatel" type="novatel_node" name="novatel_node" output="screen" 
+      required="true">
+
+    <param name="port" value="/dev/ttyUSB0" />
+    <param name="baudrate" value="115200" />
+
+    <param name="odom_topic" value="/gps_odom" />
+
+    <param name="log_commands" value="" />
+
+    <!-- Hodo - include something useful here. -->
+    <param name="span_default_logs_period" value="0.0" />
+    <param name="gps_default_logs_period" value="1.0" />
+
+    <!-- Note that NavSatFix topics (as is psrpos) report position covariance
+          matrices with ENU units. In order to obtain this, you must also ask 
+          for the BestUTM log. Otherwise, only PSR LLA will be reported. -->
+    <param name="psrpos_topic" value="/gps_fix_psr" />
+    <param name="psrpos_default_logs_period" value="1.0" />
+
+    <!-- L1L2Range message. This requires the BestUTM log be requested, as it 
+    requires LLA and LLA StD. -->
+    <param name="range_default_logs_period" value="0" />
+
+    <!-- will call GPSEPHEMB _____, using the string specified here
+        Logging options:
+            ONCHANGED
+            ONNEW
+            ONTIME 1.0 (or other interval)
+            ONCE
+        In the case of an empty string, no ephermis will be requested (default)
+     -->
+    <param name="ephem_log" value="" />
+
+  </node>
+
+</launch>
+
