@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     }
 //    my_gps.UnlogAll();
 //    sleep(2);
-    my_gps.ConfigureLogs("BESTPOSB ONTIME 1.0");
+    my_gps.ConfigureLogs("ALMANACB ONCE");
 //    sleep(30);
 //    my_gps.ConfigureLogs("GPSEPHEMB ONCHANGED");
 //    my_gps.SaveConfiguration();

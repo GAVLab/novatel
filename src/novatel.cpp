@@ -566,7 +566,7 @@ bool Novatel::InjectAlmanac(Almanac almanac) {
         cout << "SIZEOF: " << sizeof(almanac) << endl;
         uint8_t* msg_ptr = (unsigned char*)&almanac;
         uint32_t crc = CalculateBlockCRC32 (sizeof(almanac)-4, msg_ptr);
-        memcpy(almanac.crc, &crc, sizeof(crc));
+        memcpy(almanac.crc, &crc, sizeof(crc)); // TODO: check byte ordering for crc
         bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(almanac));
         if(result) {
             cout << "Sent ALMANAC." << endl;
@@ -1307,6 +1307,15 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             // Copy the CRC
             memcpy(&raw_almanac.crc, message+header_length+payload_length, 4);
 
+            /*
+            //TODO: Test crc calculation, see if need to flip byte order
+            cout << "Output crc: ";
+            printHex((unsigned char*)almanac.crc,4);
+            uint8_t* msg_ptr = (unsigned char*)&almanac;
+            uint32_t crc = CalculateBlockCRC32 (sizeof(almanac)-4, msg_ptr);
+            cout << "Calculated crc: ";
+            printHex((unsigned char*)crc,4);
+            */
             if(almanac_callback_)
                 almanac_callback_(almanac, read_timestamp_);
             break;
