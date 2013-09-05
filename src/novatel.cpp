@@ -523,10 +523,50 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     return SendCommand(time_cmd.str());
 }
 
+uint8_t          sync1;          //!< start of packet first byte (0xAA)
+uint8_t          sync2;          //!< start of packet second byte (0x44)
+uint8_t          sync3;          //!< start of packet third  byte (0x12)
+uint8_t          header_length; 	//!< Length of the header in bytes ( From start of packet )
+uint16_t         message_id;    	//!< Message ID number
+uint8_t          message_type;  	//!< Message type - binary, ascii, nmea, etc...
+uint8_t          port_address;  	//!< Address of the data port the log was received on
+uint16_t         message_length;	//!< Message length (Not including header or CRC)
+uint16_t         sequence;      	//!< Counts down from N-1 to 0 for multiple related logs
+uint8_t          idle;          	//!< Time the processor was idle in last sec between logs with same ID
+uint8_t          time_status;    //!< Indicates the quality of the GPS time
+uint16_t         gps_week;      	//!< GPS Week number
+uint32_t         gps_millisecs; 	//!< Milliseconds into week
+uint32_t         status;        	//!< Receiver status word
+uint16_t         Reserved;      	//!< Reserved for internal use
+uint16_t         version;       	//!< Receiver software build number (0-65535)
+
 bool Novatel::InjectAlmanac(Almanac almanac) {
     try {
+        MessageType type;
+        type.format = BINARY;
+        type.response = ORIGINAL_MESSAGE;
+
+        almanac.header.sync1 = NOVATEL_SYNC_BYTE_1;
+        almanac.header.sync2 = NOVATEL_SYNC_BYTE_2;
+        almanac.header.sync3 = NOVATEL_SYNC_BYTE_3;
+        almanac.header.header_length = HEADER_SIZE;
+        almanac.header.message_id = ALMANACB_LOG_TYPE;
+        almanac.header.message_type = type;
+        almanac.header.port_address = THISPORT;
+        almanac.header.message_length = 4+almanac.number_of_prns*112;
+        almanac.header.sequence = 0;
+        almanac.header.idle = 0; //!< ignored on input
+        almanac.header.time_status = 0; //!< ignored on input
+        almanac.header.gps_week = 0; //!< ignored on input
+        almanac.header.gps_millisecs = 0; //!< ignored on input
+        almanac.header.status = 0; //!< ignored on input
+        almanac.header.Reserved = 0; //!< ignored on input
+        almanac.header.version = 0; //!< ignored on input
+
         cout << "SIZEOF: " << sizeof(almanac) << endl;
         uint8_t* msg_ptr = (unsigned char*)&almanac;
+        uint32_t crc = CalculateBlockCRC32 (sizeof(almanac)-4, msg_ptr);
+        memcpy(almanac.crc, &crc, sizeof(crc));
         bool result = SendBinaryDataToReceiver(msg_ptr, sizeof(almanac));
         if(result) {
             cout << "Sent ALMANAC." << endl;

@@ -76,6 +76,15 @@ namespace novatel {
 //*******************************************************************************
 // HEADER STRUCTURES
 //*******************************************************************************
+/*!
+ * Message Type
+ */
+PACK(
+struct MessageType {
+    unsigned reserved:5;
+    MessageFormat format:2;
+    ResponseBit response:1;
+});
 
 //! Header prepended to OEM4 binary messages
 PACK(
@@ -86,7 +95,7 @@ struct Oem4BinaryHeader
    uint8_t          sync3;          //!< start of packet third  byte (0x12)
    uint8_t          header_length; 	//!< Length of the header in bytes ( From start of packet )
    uint16_t         message_id;    	//!< Message ID number
-   uint8_t          message_type;  	//!< Message type - binary, ascii, nmea, etc...
+   MessageType      message_type;  	//!< Message type - binary, ascii, nmea, etc...
    uint8_t          port_address;  	//!< Address of the data port the log was received on
    uint16_t         message_length;	//!< Message length (Not including header or CRC)
    uint16_t         sequence;      	//!< Counts down from N-1 to 0 for multiple related logs
@@ -505,8 +514,6 @@ struct Dop {
 //*******************************************************************************
 // MESSAGE SPECIFIC GPS STRUCTURES
 //*******************************************************************************
-
-
 
 /*!
  * BSLNXYZ Message Structure
