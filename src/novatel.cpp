@@ -59,7 +59,7 @@ unsigned long CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in
  * user callback is not set.  Returns the current time from the
  * CPU clock as the number of seconds from Jan 1, 1970
  */
-double DefaultGetTime() {
+inline double DefaultGetTime() {
 	boost::posix_time::ptime present_time(boost::posix_time::microsec_clock::universal_time());
 	boost::posix_time::time_duration duration(present_time.time_of_day());
 	return (double)(duration.total_milliseconds())/1000.0;
@@ -103,7 +103,7 @@ void Tokenize(const std::string& str, std::vector<std::string>& tokens, const st
 	}
 }
 
-void DefaultAcknowledgementHandler() {
+inline void DefaultAcknowledgementHandler() {
     ;//std::cout << "Acknowledgement received." << std::endl;
 }
 
@@ -142,7 +142,7 @@ inline void DefaultRawEphemCallback(RawEphemeris ephemeris, double time_stamp) {
 Novatel::Novatel() {
 	serial_port_=NULL;
 	reading_status_=false;
-	time_handler_ = DefaultGetTime;
+    time_handler_ = DefaultGetTime;
     handle_acknowledgement_=DefaultAcknowledgementHandler;
     best_position_callback_=DefaultBestPositionCallback;
     raw_ephemeris_callback_=DefaultRawEphemCallback;
