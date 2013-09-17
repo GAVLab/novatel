@@ -612,7 +612,7 @@ bool Novatel::HardwareReset() {
         if(command_sent) {
             boost::mutex::scoped_lock lock(reset_mutex_);
             waiting_for_reset_complete_ = true;
-            boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(30000);
+            boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(5000);
             if (reset_condition_.timed_wait(lock,timeout)) {
                 log_info_("Hardware Reset Complete.");
                 return true;
@@ -1057,14 +1057,14 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 		}
 
 		if (buffer_index_ == 0) {	// looking for beginning of message
-			if (message[ii] == 0xAA) {	// beginning of msg found - add to buffer
+            if (message[ii] == NOVATEL_SYNC_BYTE_1) {	// beginning of msg found - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
 				bytes_remaining_ = 0;
-			} else if (message[ii] == '<') {
+            } else if (message[ii] == NOVATEL_ACK_BYTE_1) {
 				// received beginning of acknowledgement
 				reading_acknowledgement_ = true;
 				buffer_index_ = 1;
-            } else if ((message[ii] == 0x5B) && waiting_for_reset_complete_) {
+            } else if ((message[ii] == NOVATEL_RESET_BYTE_1) && waiting_for_reset_complete_) {
                 // received {COM#} acknowledging receiver reset complete
                 reading_reset_complete_ = true;
                 buffer_index_ = 1;
@@ -1072,12 +1072,12 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
         //log_debug_("BufferIncomingData::Received unknown data.");
 			}
 		} else if (buffer_index_ == 1) {	// verify 2nd character of header
-			if (message[ii] == 0x44) {	// 2nd byte ok - add to buffer
+            if (message[ii] == NOVATEL_SYNC_BYTE_2) {	// 2nd byte ok - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
-			} else if ( (message[ii] == 'O') && reading_acknowledgement_ ) {
+            } else if ( (message[ii] == NOVATEL_ACK_BYTE_2) && reading_acknowledgement_ ) {
 				// 2nd byte of acknowledgement
 				buffer_index_ = 2;
-            } else if ((message[ii] == 'C') && reading_reset_complete_) {
+            } else if ((message[ii] == NOVATEL_RESET_BYTE_2) && reading_reset_complete_) {
                 // 2nd byte of receiver reset complete message
                 buffer_index_ = 2;
 			} else {
@@ -1088,9 +1088,9 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
                 reading_reset_complete_=false;
 			} // end if (msg[i]==0x44)
 		} else if (buffer_index_ == 2) {	// verify 3rd character of header
-			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
+            if (message[ii] == NOVATEL_SYNC_BYTE_3) {	// 2nd byte ok - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
-            } else if ( (message[ii-1]=='O')&&(message[ii] == 'K') && (reading_acknowledgement_) ) {
+            } else if ( (message[ii] == NOVATEL_ACK_BYTE_3) && (reading_acknowledgement_) ) {
                 log_info_("RECEIVED AN ACK.");
 				// final byte of acknowledgement received
 				buffer_index_ = 0;
@@ -1101,7 +1101,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 
 				// ACK received
 				handle_acknowledgement_();
-            } else if ((message[ii] == 'O') && reading_reset_complete_) {
+            } else if ((message[ii] == NOVATEL_RESET_BYTE_3) && reading_reset_complete_) {
                 // 3rd byte of receiver reset complete message
                 buffer_index_ = 3;
 			} else {
@@ -1112,8 +1112,8 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
                 reading_reset_complete_ = false;
 			} // end if (msg[i]==0x12)
 		} else if (buffer_index_ == 3) {	// number of bytes in header - not including sync
-            if((message[ii] == 'M') && (message[ii+2] == 0x5D) && reading_reset_complete_
-                    && waiting_for_reset_complete_) {
+            if((message[ii] == NOVATEL_RESET_BYTE_4) && (message[ii+2] == NOVATEL_RESET_BYTE_6)
+                    && reading_reset_complete_ && waiting_for_reset_complete_) {
                 // 4th byte of receiver reset complete message
 //                log_info_("RECEIVER RESET COMPLETE RECEIVED.");
                 buffer_index_ = 0;

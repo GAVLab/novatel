@@ -54,6 +54,14 @@ namespace novatel {
 #define NOVATEL_SYNC_BYTE_1 0xAA
 #define NOVATEL_SYNC_BYTE_2 0x44
 #define NOVATEL_SYNC_BYTE_3 0x12
+#define NOVATEL_ACK_BYTE_1 '<'
+#define NOVATEL_ACK_BYTE_2 'O'
+#define NOVATEL_ACK_BYTE_3 'K'
+#define NOVATEL_RESET_BYTE_1 0X5B
+#define NOVATEL_RESET_BYTE_2 'C'
+#define NOVATEL_RESET_BYTE_3 'O'
+#define NOVATEL_RESET_BYTE_4 'M'
+#define NOVATEL_RESET_BYTE_6 0X5D
 
 // IMU Constants
 // scale factor between integer counts and change in velocity in m/s for AG11 and AG58
