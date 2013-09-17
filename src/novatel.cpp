@@ -522,7 +522,7 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     time_cmd << "SETAPPROXTIME " << gps_week << " " << gps_seconds;
     return SendCommand(time_cmd.str());
 }
-
+/*
 uint8_t          sync1;          //!< start of packet first byte (0xAA)
 uint8_t          sync2;          //!< start of packet second byte (0x44)
 uint8_t          sync3;          //!< start of packet third  byte (0x12)
@@ -539,6 +539,7 @@ uint32_t         gps_millisecs; 	//!< Milliseconds into week
 uint32_t         status;        	//!< Receiver status word
 uint16_t         Reserved;      	//!< Reserved for internal use
 uint16_t         version;       	//!< Receiver software build number (0-65535)
+*/
 
 bool Novatel::InjectAlmanac(Almanac almanac) {
     try {
