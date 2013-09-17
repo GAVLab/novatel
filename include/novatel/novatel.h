@@ -448,14 +448,21 @@ private:
 	size_t buffer_index_;		//!< index into data_buffer_
 	size_t header_length_;	//!< length of the current header being read
 	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
+    bool reading_reset_complete_;   //!< true if an {COM#} message confirming receiver reset if complete
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
 	double parse_timestamp_;		//!< time stamp when last parse began
 
+    //////////////////////////////////////////////////////
+    // Mutex's
+    //////////////////////////////////////////////////////
     boost::condition_variable ack_condition_;
     boost::mutex ack_mutex_;
     bool ack_received_;     //!< true if an acknowledgement has been received from the GPS
+    boost::condition_variable reset_condition_;
+    boost::mutex reset_mutex_;
+    bool reset_complete_received_;     //!< true if GPS has finished resetting and is ready for input
 
-  bool is_connected_; //!< indicates if a connection to the receiver has been established
+    bool is_connected_; //!< indicates if a connection to the receiver has been established
 	//////////////////////////////////////////////////////
     // Receiver information and capabilities
 	//////////////////////////////////////////////////////
