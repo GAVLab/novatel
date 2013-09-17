@@ -155,6 +155,7 @@ Novatel::Novatel() {
     read_timestamp_=0;
     parse_timestamp_=0;
     ack_received_=false;
+    waiting_for_reset_complete_=false;
     is_connected_ = false;
 }
 
@@ -610,12 +611,14 @@ bool Novatel::HardwareReset() {
         bool command_sent = SendCommand(rst_cmd.str(),false);
         if(command_sent) {
             boost::mutex::scoped_lock lock(reset_mutex_);
-            boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(10000);
+            waiting_for_reset_complete_ = true;
+            boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(30000);
             if (reset_condition_.timed_wait(lock,timeout)) {
                 log_info_("Hardware Reset Complete.");
                 return true;
             } else {
                 log_error_("Hardware Reset never Completed.");
+                waiting_for_reset_complete_ = false;
                 return false;
             }
         } else {
@@ -623,6 +626,7 @@ bool Novatel::HardwareReset() {
         }
     } catch (std::exception &e) {
         std::stringstream output;
+        waiting_for_reset_complete_ = false;
         output << "Error in Novatel::HardwareReset(): " << e.what();
         log_error_(output.str());
         return false;
@@ -636,12 +640,14 @@ bool Novatel::HotStartReset() {
         bool command_sent = SendCommand(rst_cmd.str(),false);
         if(command_sent) {
             boost::mutex::scoped_lock lock(reset_mutex_);
+            waiting_for_reset_complete_ = true;
             boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(10000);
             if (reset_condition_.timed_wait(lock,timeout)) {
                 log_info_("HotStartReset Complete.");
                 return true;
             } else {
                 log_error_("HotStartReset never Completed.");
+                waiting_for_reset_complete_ = false;
                 return false;
             }
         } else {
@@ -649,6 +655,7 @@ bool Novatel::HotStartReset() {
         }
     } catch (std::exception &e) {
         std::stringstream output;
+        waiting_for_reset_complete_ = false;
         output << "Error in Novatel::HotStartReset(): " << e.what();
         log_error_(output.str());
         return false;
@@ -665,12 +672,14 @@ bool Novatel::WarmStartReset() {
         bool time_reset = SendCommand(rst_time_cmd.str(),false);
         if(pos_reset && time_reset) {
             boost::mutex::scoped_lock lock(reset_mutex_);
+            waiting_for_reset_complete_ = true;
             boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(10000);
             if (reset_condition_.timed_wait(lock,timeout)) {
                 log_info_("WarmStartReset Complete.");
                 return true;
             } else {
                 log_error_("WarmStartReset never Completed.");
+                waiting_for_reset_complete_ = false;
                 return false;
             }
         } else {
@@ -678,6 +687,7 @@ bool Novatel::WarmStartReset() {
         }
     } catch (std::exception &e) {
         std::stringstream output;
+        waiting_for_reset_complete_ = false;
         output << "Error in Novatel::WarmStartReset(): " << e.what();
         log_error_(output.str());
         return false;
@@ -691,12 +701,14 @@ bool Novatel::ColdStartReset() {
         bool command_sent = SendCommand(rst_cmd.str(),false); //!< FRESET doesn't reply with an ACK
         if(command_sent) {
             boost::mutex::scoped_lock lock(reset_mutex_);
+            waiting_for_reset_complete_ = true;
             boost::system_time const timeout=boost::get_system_time()+ boost::posix_time::milliseconds(10000);
             if (reset_condition_.timed_wait(lock,timeout)) {
                 log_info_("ColdStartReset Complete.");
                 return true;
             } else {
                 log_error_("ColdStartReset never Completed.");
+                waiting_for_reset_complete_ = false;
                 return false;
             }
         } else {
@@ -704,6 +716,7 @@ bool Novatel::ColdStartReset() {
         }
     } catch (std::exception &e) {
         std::stringstream output;
+        waiting_for_reset_complete_ = false;
         output << "Error in Novatel::ColdStartReset(): " << e.what();
         log_error_(output.str());
         return false;
@@ -1031,8 +1044,8 @@ void Novatel::ReadSerialPort() {
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
     if(length > 0) {
-        cout << "BUFFERINCOMINGDATA: " << endl;
-        printHex(message,length);
+//        cout << "BUFFERINCOMINGDATA: " << endl;
+//        printHex(message,length);
     }
 	BINARY_LOG_TYPE message_id;
 	// add incoming data to buffer
@@ -1051,7 +1064,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				// received beginning of acknowledgement
 				reading_acknowledgement_ = true;
 				buffer_index_ = 1;
-            } else if (message[ii] == '{') {
+            } else if ((message[ii] == 0x5B) && waiting_for_reset_complete_) {
                 // received {COM#} acknowledging receiver reset complete
                 reading_reset_complete_ = true;
                 buffer_index_ = 1;
@@ -1072,6 +1085,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				buffer_index_ = 0;
 				bytes_remaining_=0;
 				reading_acknowledgement_=false;
+                reading_reset_complete_=false;
 			} // end if (msg[i]==0x44)
 		} else if (buffer_index_ == 2) {	// verify 3rd character of header
 			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
@@ -1095,18 +1109,21 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				buffer_index_ = 0;
 				bytes_remaining_ = 0;
 				reading_acknowledgement_ = false;
+                reading_reset_complete_ = false;
 			} // end if (msg[i]==0x12)
 		} else if (buffer_index_ == 3) {	// number of bytes in header - not including sync
-            if((message[ii] == 'M') && (message[ii+2] == '}') && reading_reset_complete_) {
+            if((message[ii] == 'M') && (message[ii+2] == 0x5D) && reading_reset_complete_
+                    && waiting_for_reset_complete_) {
                 // 4th byte of receiver reset complete message
-                log_info_("RECEIVER RESET COMPLETE RECEIVED.");
+//                log_info_("RECEIVER RESET COMPLETE RECEIVED.");
                 buffer_index_ = 0;
                 reading_reset_complete_ = false;
                 boost::lock_guard<boost::mutex> lock(reset_mutex_);
-                reset_complete_received_ = true;
+                waiting_for_reset_complete_ = false;
                 reset_condition_.notify_all();
 
             } else {
+                reading_reset_complete_ = false;
                 data_buffer_[buffer_index_++] = message[ii];
                 // length of header is in byte 4
                 header_length_ = message[ii];

@@ -460,7 +460,7 @@ private:
     bool ack_received_;     //!< true if an acknowledgement has been received from the GPS
     boost::condition_variable reset_condition_;
     boost::mutex reset_mutex_;
-    bool reset_complete_received_;     //!< true if GPS has finished resetting and is ready for input
+    bool waiting_for_reset_complete_;     //!< true if GPS has finished resetting and is ready for input
 
     bool is_connected_; //!< indicates if a connection to the receiver has been established
 	//////////////////////////////////////////////////////
