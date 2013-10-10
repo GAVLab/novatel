@@ -368,6 +368,13 @@ private:
 
 	bool ParseVersion(std::string packet);
 
+	void UnpackCompressedRangeRecord(const CompressedRangeRecord &cmp,
+	                                       RangeData             &rng);
+
+	double UnpackCompressedPsrStd(const uint16_t &val) const;
+
+	double UnpackCompressedAccumulatedDoppler(const int32_t &val) const;
+
 
     //////////////////////////////////////////////////////
     // Serial port reading members

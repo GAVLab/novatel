@@ -1079,8 +1079,8 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case RANGECMPB_LOG_TYPE: {
 	          CompressedRangeMeasurements cmp_ranges;
-	        	header_length = (uint16_t) *(message+3);
-	        	payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+	        	header_length = (uint16_t) * (message + 3);
+	        	payload_length = (((uint16_t) * (message + 9)) << 8) + ((uint16_t) *(message+8));
 	        	// unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
 	        	
 	        	// std::stringstream asdf;
@@ -1092,13 +1092,27 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	//Copy header and unrepeated message block
 	        	memcpy(&cmp_ranges.header,message, header_length);
 	        	memcpy(&cmp_ranges.number_of_observations,
-	        	    message+header_length, 4);
+	        	    message + header_length, 4);
 	        	// Copy Repeated portion of message block)
-            memcpy(&cmp_ranges.range_data, message+header_length+4,
-                (24*cmp_ranges.number_of_observations));
+            memcpy(&cmp_ranges.range_data, message + header_length + 4,
+                (24 * cmp_ranges.number_of_observations));
 	        	// Copy the CRC
 	        	memcpy(&cmp_ranges.crc,
-	        	    message+header_length+payload_length, 4);
+	        	    message + header_length+payload_length, 4);
+
+	        	RangeMeasurements rng;
+
+	        	rng.header = cmp_ranges.header;
+	        	rng.number_of_observations = cmp_ranges.number_of_observations;
+	        	memcpy(rng.crc, cmp_ranges.crc, 4);
+
+	        	for (size_t kk = 0; kk < cmp_ranges.number_of_observations; ++kk)
+	        	{
+	        	  UnpackCompressedRangeRecord(
+	        	      cmp_ranges.range_data[kk].range_record,
+	        	      rng.range_data[kk]);
+	        	}
+
 	          
 	        	std::cout << "-----------------------------message_id: RANGECMPB " << std::endl;
 	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
@@ -1211,6 +1225,113 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         default:
             break;
     }
+}
+
+void Novatel::UnpackCompressedRangeRecord(const CompressedRangeRecord &cmp,
+                                                RangeData             &rng)
+{
+  rng.pseudorange = double(cmp.pseudorange) / 128.0;
+
+  rng.pseudorange_standard_deviation =
+      UnpackCompressedPsrStd(cmp.pseudorange_standard_deviation);
+
+  //rng.accumulated_doppler = UnpackCompresdouble(cmp.accumulated_doppler) / 256.0;
+
+/*  double propak::calculate_adrstd(unsigned char rangecmp_adrstd){
+      return((rangecmp_adrstd+1.0)/512.0);
+  }
+  double propak::calculate_locktime(unsigned long rangecmp_locktime){
+      return((double)rangecmp_locktime/32.0);
+  }
+  double propak::calculate_cno(unsigned long rangecmp_cno){
+      return ((double)rangecmp_cno+20.0);
+  }*/
+}
+
+double Novatel::UnpackCompressedPsrStd(const uint16_t &val) const
+{
+  switch(val)
+  {
+    case 0:
+        return(0.050);
+        break;
+    case 1:
+        return(0.075);
+        break;
+    case 2:
+        return(0.113);
+        break;
+    case 3:
+        return(0.169);
+        break;
+    case 4:
+        return(0.253);
+        break;
+    case 5:
+        return(0.380);
+        break;
+    case 6:
+        return(0.570);
+        break;
+    case 7:
+        return(0.854);
+        break;
+    case 8:
+        return(1.281);
+        break;
+    case 9:
+        return(2.375);
+        break;
+    case 10:
+        return(4.750);
+        break;
+    case 11:
+        return(9.500);
+        break;
+    case 12:
+        return(19.000);
+        break;
+    case 13:
+        return(38.000);
+        break;
+    case 14:
+        return(76.000);
+        break;
+    case 15:
+        return(152.000);
+        break;
+   }
+}
+
+double Novatel::UnpackCompressedAccumulatedDoppler(const uint32_t &adr,
+    const uint32_t &psr,) const
+{
+  double wavelength;
+  double adr_rolls;
+  double scaled_adr = (double)rangecmp_adr / 256.0;
+  int maxvalue = 8388608;
+
+  switch (freq_num){
+case 1: //L1 frequency
+    wavelength=0.1902936727984;
+    break;
+case 2:  //L2 frequency
+    wavelength=0.2442102134246;
+    break;
+  }
+
+  adr_rolls = ((psr / wavelength) + scaled_adr) / maxvalue;
+
+  if(adr_rolls<=0)
+  {
+    adr_rolls -= 0.5;
+  }
+  else
+  {
+    adr_rolls += 0.5;
+  }
+
+  return(scaled_adr - (maxvalue * (int)adr_rolls));
 }
 
 // this functions matches the conversion done by the Novatel receivers
