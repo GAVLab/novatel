@@ -80,6 +80,9 @@ if (NOVATEL_BUILD_EXAMPLES)
 	add_executable(novatel_example examples/novatel_example.cpp)
 	target_link_libraries(novatel_example novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
+  add_executable(novatel_read_from_file examples/novatel_read_from_file.cpp)
+  target_link_libraries(novatel_read_from_file novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
 	add_executable(novatel_read_bestutm examples/novatel_read_bestutm.cpp)
 	target_link_libraries(novatel_read_bestutm novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif (NOVATEL_BUILD_EXAMPLES)
