@@ -940,7 +940,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 		uint16_t header_length;
 
 		// obtain the received crc
-		std::cout << std::endl << "-----------------------------message_id: " << std::dec << message_id << std::endl;
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
             Position best_gps;
@@ -975,7 +974,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         case BESTXYZB_LOG_TYPE:
             PositionEcef best_xyz;
             memcpy(&best_xyz, message, sizeof(best_xyz));
-            std::cout << "-----------------------------message_id: BESTXYZ " << std::endl;
             if (best_position_ecef_callback_)
             	best_position_ecef_callback_(best_xyz, read_timestamp_);
             break;
@@ -1071,7 +1069,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             memcpy(&ranges.range_data, message+header_length+4, (44*ranges.number_of_observations));
             //Copy CRC
             memcpy(&ranges.crc, message+header_length+payload_length, 4);
-            std::cout << "-----------------------------message_id: RANGEB " << std::endl;
             if (range_measurements_callback_)
             	range_measurements_callback_(ranges, read_timestamp_);
             break;
@@ -1098,7 +1095,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	memcpy(&cmp_ranges.crc,
 	        	    message+header_length+payload_length, 4);
 	          
-	        	std::cout << "-----------------------------message_id: RANGECMPB " << std::endl;
 	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
 	        	// asdf << "crc after shoving: " ;
 						// log_info_(asdf.str().c_str()); asdf.str("");
@@ -1125,7 +1121,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	            log_warning_(ss.str().c_str());
 	          } else {
 	            memcpy(&ephemeris, message, sizeof(ephemeris));
-	            std::cout << "-----------------------------message_id: GPSEPHEMB " << std::endl;
 	            if (gps_ephemeris_callback_)
 	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
 	          }
