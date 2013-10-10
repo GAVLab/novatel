@@ -1357,14 +1357,14 @@ double Novatel::UnpackCompressedAccumulatedDoppler(
     }
     else
     {
-      std::cout << "Unknown GPS Frequency type!" << std::endl;
+/*      std::cout << "Unknown GPS Frequency type!" << std::endl;
       std::cout << "PRN: "
                 << cmp.range_record.satellite_prn
                 << "\tSatellite System: "
                 << cmp.channel_status.satellite_sys
                 << "\tSignal Type: "
                 << cmp.channel_status.signal_type
-                << std::endl;
+                << std::endl;*/
     }
 
     break;
@@ -1381,14 +1381,14 @@ double Novatel::UnpackCompressedAccumulatedDoppler(
     }
     else
     {
-      std::cout << "Unknown GLO Frequency type!" << std::endl;
+/*      std::cout << "Unknown GLO Frequency type!" << std::endl;
       std::cout << "PRN: "
                 << cmp.range_record.satellite_prn
                 << "\tSatellite System: "
                 << cmp.channel_status.satellite_sys
                 << "\tSignal Type: "
                 << cmp.channel_status.signal_type
-                << std::endl;
+                << std::endl;*/
     }
     break;
 
@@ -1399,26 +1399,26 @@ double Novatel::UnpackCompressedAccumulatedDoppler(
     }
     else
     {
-      std::cout << "Unknown WAAS Frequency type!" << std::endl;
+/*      std::cout << "Unknown WAAS Frequency type!" << std::endl;
       std::cout << "PRN: "
                 << cmp.range_record.satellite_prn
                 << "\tSatellite System: "
                 << cmp.channel_status.satellite_sys
                 << "\tSignal Type: "
                 << cmp.channel_status.signal_type
-                << std::endl;
+                << std::endl;*/
     }
     break;
 
   default:
-    std::cout << "Unknown Satellite System type!" << std::endl;
+/*    std::cout << "Unknown Satellite System type!" << std::endl;
     std::cout << "PRN: "
               << cmp.range_record.satellite_prn
               << "\tSatellite System: "
               << cmp.channel_status.satellite_sys
               << "\tSignal Type: "
               << cmp.channel_status.signal_type
-              << std::endl;
+              << std::endl;*/
     break;
   }
 
