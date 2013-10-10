@@ -60,6 +60,11 @@ namespace novatel {
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
 #define CRC32_POLYNOMIAL 0xEDB88320L
 
+// Constants for unpacking RANGECMP
+#define CMP_MAX_VALUE         8388608.0
+#define CMP_GPS_WAVELENGTH_L1 0.1902936727984
+#define CMP_GPS_WAVELENGTH_L2 0.2442102134246
+
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -368,12 +373,14 @@ private:
 
 	bool ParseVersion(std::string packet);
 
-	void UnpackCompressedRangeRecord(const CompressedRangeRecord &cmp,
-	                                       RangeData             &rng);
+	void UnpackCompressedRangeData(const CompressedRangeData &cmp,
+	                                     RangeData           &rng);
 
 	double UnpackCompressedPsrStd(const uint16_t &val) const;
 
-	double UnpackCompressedAccumulatedDoppler(const int32_t &val) const;
+	double UnpackCompressedAccumulatedDoppler(
+	    const CompressedRangeData &cmp,
+	    const double              &uncmpPsr) const;
 
 
     //////////////////////////////////////////////////////

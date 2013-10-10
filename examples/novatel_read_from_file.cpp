@@ -21,9 +21,16 @@ void RangeMeasurementsHandler(novatel::RangeMeasurements &range,
 
   for (size_t kk = 0; kk < range.number_of_observations; ++kk)
   {
-    std::cout << "\tPRN: " << range.range_data[kk].satellite_prn <<
+/*    std::cout << "\tPRN: " << range.range_data[kk].satellite_prn <<
         "\tC/N0: " << range.range_data[kk].carrier_to_noise <<
-        "\tPSR: " << range.range_data[kk].pseudorange << std::endl;
+        "\tPSR: " << range.range_data[kk].pseudorange <<
+        "\tDop: " << range.range_data[kk].doppler << std::endl;*/
+         //"\tADR " << range.range_data[kk].accumulated_doppler << std::endl;
+
+    std::cout << "PRN: " << range.range_data[kk].satellite_prn
+              << "\tSat: " << range.range_data[kk].channel_status.satellite_sys
+              << "\tSig: " << range.range_data[kk].channel_status.signal_type
+              << std::endl;
   }
 
 };
@@ -97,8 +104,8 @@ int main(int argc, char* argv[])
 
   novatel::Novatel rx1;
   rx1.set_range_measurements_callback(&RangeMeasurementsHandler);
-  rx1.set_compressed_range_measurements_callback(&CompressedRangeMeasurementsHandler);
-  rx1.set_best_position_ecef_callback(&PositionEcefHandler);
+  //rx1.set_compressed_range_measurements_callback(&CompressedRangeMeasurementsHandler);
+  //rx1.set_best_position_ecef_callback(&PositionEcefHandler);
 
   rx1.ReadFromFile(buff, sizeof(buff));
 

@@ -1,4 +1,6 @@
 #include "novatel/novatel.h"
+
+#include <cmath>
 #include <iostream>
 #include <valarray>
 #include <fstream>
@@ -942,7 +944,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 		uint16_t header_length;
 
 		// obtain the received crc
-		std::cout << std::endl << "-----------------------------message_id: " << std::dec << message_id << std::endl;
     switch (message_id) {
         case BESTGPSPOS_LOG_TYPE:
             Position best_gps;
@@ -977,7 +978,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         case BESTXYZB_LOG_TYPE:
             PositionEcef best_xyz;
             memcpy(&best_xyz, message, sizeof(best_xyz));
-            std::cout << "-----------------------------message_id: BESTXYZ " << std::endl;
             if (best_position_ecef_callback_)
             	best_position_ecef_callback_(best_xyz, read_timestamp_);
             break;
@@ -1032,7 +1032,8 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         case PSRDOPB_LOG_TYPE:
             Dop psr_dop;
             header_length = (uint16_t) *(message+3);
-            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+            payload_length = (((uint16_t) *(message+9)) << 8) +
+                             ((uint16_t) *(message+8));
 
             // Copy header and unrepeated fields
             memcpy(&psr_dop, message, header_length+24);
@@ -1065,22 +1066,34 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
         case RANGEB_LOG_TYPE:
             RangeMeasurements ranges;
             header_length = (uint16_t) *(message+3);
-            payload_length = (((uint16_t) *(message+9)) << 8) + ((uint16_t) *(message+8));
+            payload_length = (((uint16_t) *(message+9)) << 8) +
+                             ((uint16_t) *(message+8));
 
             // Copy header and #observations following
             memcpy(&ranges, message, header_length+4);
+
             //Copy repeated fields
-            memcpy(&ranges.range_data, message+header_length+4, (44*ranges.number_of_observations));
+            memcpy(&ranges.range_data,
+                   message + header_length + 4,
+                   (44*ranges.number_of_observations));
+
             //Copy CRC
-            memcpy(&ranges.crc, message+header_length+payload_length, 4);
-            std::cout << "-----------------------------message_id: RANGEB " << std::endl;
+            memcpy(&ranges.crc,
+                   message + header_length + payload_length,
+                   4);
+
             if (range_measurements_callback_)
+            {
             	range_measurements_callback_(ranges, read_timestamp_);
+            }
+
             break;
+
         case RANGECMPB_LOG_TYPE: {
 	          CompressedRangeMeasurements cmp_ranges;
-	        	header_length = (uint16_t) * (message + 3);
-	        	payload_length = (((uint16_t) * (message + 9)) << 8) + ((uint16_t) *(message+8));
+	        	header_length = (uint16_t) *(message + 3);
+	        	payload_length = (((uint16_t) *(message + 9)) << 8) +
+	        	                 ((uint16_t) *(message + 8));
 	        	// unsigned long crc_of_received = CalculateBlockCRC32(length-4, message);
 	        	
 	        	// std::stringstream asdf;
@@ -1090,15 +1103,20 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	// log_info_(asdf.str().c_str()); asdf.str("");
 
 	        	//Copy header and unrepeated message block
-	        	memcpy(&cmp_ranges.header,message, header_length);
+	        	memcpy(&cmp_ranges.header, message, header_length);
 	        	memcpy(&cmp_ranges.number_of_observations,
-	        	    message + header_length, 4);
+	        	       message + header_length,
+	        	       4);
+
 	        	// Copy Repeated portion of message block)
-            memcpy(&cmp_ranges.range_data, message + header_length + 4,
-                (24 * cmp_ranges.number_of_observations));
+            memcpy(&cmp_ranges.range_data,
+                   message + header_length + 4,
+                   (24 * cmp_ranges.number_of_observations));
+
 	        	// Copy the CRC
 	        	memcpy(&cmp_ranges.crc,
-	        	    message + header_length+payload_length, 4);
+	        	       message + header_length + payload_length,
+	        	       4);
 
 	        	RangeMeasurements rng;
 
@@ -1108,13 +1126,10 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 
 	        	for (size_t kk = 0; kk < cmp_ranges.number_of_observations; ++kk)
 	        	{
-	        	  UnpackCompressedRangeRecord(
-	        	      cmp_ranges.range_data[kk].range_record,
-	        	      rng.range_data[kk]);
+	        	  UnpackCompressedRangeData(cmp_ranges.range_data[kk],
+	        	                            rng.range_data[kk]);
 	        	}
 
-	          
-	        	std::cout << "-----------------------------message_id: RANGECMPB " << std::endl;
 	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
 	        	// asdf << "crc after shoving: " ;
 						// log_info_(asdf.str().c_str()); asdf.str("");
@@ -1128,7 +1143,16 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 
 	            // memcpy(&cmp_ranges, message, length);
 	            if (compressed_range_measurements_callback_)
-		            	compressed_range_measurements_callback_(cmp_ranges, read_timestamp_);
+	            {
+		           	compressed_range_measurements_callback_(cmp_ranges,
+		           	                                        read_timestamp_);
+	            }
+
+	            if (range_measurements_callback_)
+	            {
+	              range_measurements_callback_(rng, read_timestamp_);
+	            }
+
 	            break;
           }
         case GPSEPHEMB_LOG_TYPE: {
@@ -1141,7 +1165,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	            log_warning_(ss.str().c_str());
 	          } else {
 	            memcpy(&ephemeris, message, sizeof(ephemeris));
-	            std::cout << "-----------------------------message_id: GPSEPHEMB " << std::endl;
+
 	            if (gps_ephemeris_callback_)
 	            	gps_ephemeris_callback_(ephemeris, read_timestamp_);
 	          }
@@ -1227,25 +1251,29 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
     }
 }
 
-void Novatel::UnpackCompressedRangeRecord(const CompressedRangeRecord &cmp,
-                                                RangeData             &rng)
+void Novatel::UnpackCompressedRangeData(const CompressedRangeData &cmp,
+                                              RangeData           &rng)
 {
-  rng.pseudorange = double(cmp.pseudorange) / 128.0;
+  rng.satellite_prn = cmp.range_record.satellite_prn;
+
+  rng.channel_status = cmp.channel_status;
+
+  rng.pseudorange = double(cmp.range_record.pseudorange) / 128.0;
 
   rng.pseudorange_standard_deviation =
-      UnpackCompressedPsrStd(cmp.pseudorange_standard_deviation);
+      UnpackCompressedPsrStd(cmp.range_record.pseudorange_standard_deviation);
 
-  //rng.accumulated_doppler = UnpackCompresdouble(cmp.accumulated_doppler) / 256.0;
+  rng.accumulated_doppler =
+      UnpackCompressedAccumulatedDoppler(cmp, rng.pseudorange);
 
-/*  double propak::calculate_adrstd(unsigned char rangecmp_adrstd){
-      return((rangecmp_adrstd+1.0)/512.0);
-  }
-  double propak::calculate_locktime(unsigned long rangecmp_locktime){
-      return((double)rangecmp_locktime/32.0);
-  }
-  double propak::calculate_cno(unsigned long rangecmp_cno){
-      return ((double)rangecmp_cno+20.0);
-  }*/
+  rng.accumulated_doppler_std_deviation =
+      (cmp.range_record.accumulated_doppler_std_deviation + 1.0) / 512.0;
+
+  rng.doppler = cmp.range_record.doppler / 256.0;
+
+  rng.locktime = cmp.range_record.locktime / 32.0;
+
+  rng.carrier_to_noise = (float)(cmp.range_record.carrier_to_noise + 20);
 }
 
 double Novatel::UnpackCompressedPsrStd(const uint16_t &val) const
@@ -1303,26 +1331,101 @@ double Novatel::UnpackCompressedPsrStd(const uint16_t &val) const
    }
 }
 
-double Novatel::UnpackCompressedAccumulatedDoppler(const uint32_t &adr,
-    const uint32_t &psr,) const
+double Novatel::UnpackCompressedAccumulatedDoppler(
+    const CompressedRangeData &cmp,
+    const double              &uncmpPsr) const
 {
-  double wavelength;
-  double adr_rolls;
-  double scaled_adr = (double)rangecmp_adr / 256.0;
-  int maxvalue = 8388608;
 
-  switch (freq_num){
-case 1: //L1 frequency
-    wavelength=0.1902936727984;
+  double scaled_adr = (double)cmp.range_record.accumulated_doppler / 256.0;
+
+  double adr_rolls = uncmpPsr;
+
+
+  switch (cmp.channel_status.satellite_sys)
+  {
+  case 0: // GPS
+
+    if (cmp.channel_status.signal_type == 0) // L1
+    {
+      adr_rolls /= CMP_GPS_WAVELENGTH_L1;
+    }
+    else if ((cmp.channel_status.signal_type == 5) ||  // L2 P
+             (cmp.channel_status.signal_type == 9) ||  // L2 P codeless
+             (cmp.channel_status.signal_type == 17))   // L2C
+    {
+      adr_rolls /= CMP_GPS_WAVELENGTH_L2;
+    }
+    else
+    {
+      std::cout << "Unknown GPS Frequency type!" << std::endl;
+      std::cout << "PRN: "
+                << cmp.range_record.satellite_prn
+                << "\tSatellite System: "
+                << cmp.channel_status.satellite_sys
+                << "\tSignal Type: "
+                << cmp.channel_status.signal_type
+                << std::endl;
+    }
+
     break;
-case 2:  //L2 frequency
-    wavelength=0.2442102134246;
+
+  case 1: // GLO
+    // TODO: Need to compute actual wavelengths here, this is incorrect
+    if (cmp.channel_status.signal_type == 0) // L1
+    {
+      adr_rolls /= CMP_GPS_WAVELENGTH_L1;
+    }
+    else if (cmp.channel_status.signal_type == 5) // L2 P
+    {
+      adr_rolls /= CMP_GPS_WAVELENGTH_L2;
+    }
+    else
+    {
+      std::cout << "Unknown GLO Frequency type!" << std::endl;
+      std::cout << "PRN: "
+                << cmp.range_record.satellite_prn
+                << "\tSatellite System: "
+                << cmp.channel_status.satellite_sys
+                << "\tSignal Type: "
+                << cmp.channel_status.signal_type
+                << std::endl;
+    }
+    break;
+
+  case 2: // WAAS
+    if (cmp.channel_status.signal_type == 1) // L1
+    {
+      adr_rolls /= CMP_GPS_WAVELENGTH_L1;
+    }
+    else
+    {
+      std::cout << "Unknown WAAS Frequency type!" << std::endl;
+      std::cout << "PRN: "
+                << cmp.range_record.satellite_prn
+                << "\tSatellite System: "
+                << cmp.channel_status.satellite_sys
+                << "\tSignal Type: "
+                << cmp.channel_status.signal_type
+                << std::endl;
+    }
+    break;
+
+  default:
+    std::cout << "Unknown Satellite System type!" << std::endl;
+    std::cout << "PRN: "
+              << cmp.range_record.satellite_prn
+              << "\tSatellite System: "
+              << cmp.channel_status.satellite_sys
+              << "\tSignal Type: "
+              << cmp.channel_status.signal_type
+              << std::endl;
     break;
   }
 
-  adr_rolls = ((psr / wavelength) + scaled_adr) / maxvalue;
 
-  if(adr_rolls<=0)
+  adr_rolls = (adr_rolls + scaled_adr) / CMP_MAX_VALUE;
+
+  if(adr_rolls <= 0)
   {
     adr_rolls -= 0.5;
   }
@@ -1331,7 +1434,7 @@ case 2:  //L2 frequency
     adr_rolls += 0.5;
   }
 
-  return(scaled_adr - (maxvalue * (int)adr_rolls));
+  return(scaled_adr - (CMP_MAX_VALUE * (int)adr_rolls));
 }
 
 // this functions matches the conversion done by the Novatel receivers

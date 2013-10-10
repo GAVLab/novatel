@@ -44,7 +44,7 @@
 
 namespace novatel {
 
-#define MAX_NOUT_SIZE      (8192)   // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
+#define MAX_NOUT_SIZE 8192 // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
 #define EPH_CHAN 33
 #define NUMSAT 14
 #define MAX_CHAN	28  // Maximum number of signal channels
@@ -627,22 +627,22 @@ struct IonosphericModel {
  */
 PACK(
 struct ChannelStatus {
-	unsigned tracking_state : 5;
-	unsigned sv_chan_num : 5;
-	unsigned phase_lock_flag : 1;
-	unsigned parity_known_flag : 1;
-	unsigned code_locked_flag : 1;
-	unsigned correlator_type : 3;
-	unsigned satellite_sys : 3;
-	unsigned reserved1 : 1;
-	unsigned grouping : 1;
-	unsigned signal_type : 5;
-	unsigned forward_err_correction : 1;
-	unsigned primary_L1_chan : 1;
-	unsigned carrier_phase_meas : 1;
-	unsigned reserved2 : 1;
-	unsigned prn_lock_flag : 1;
-	unsigned channel_assignment : 1;
+	unsigned int tracking_state : 5;
+	unsigned int sv_chan_num : 5;
+	unsigned int phase_lock_flag : 1;
+	unsigned int parity_known_flag : 1;
+	unsigned int code_locked_flag : 1;
+	unsigned int correlator_type : 3;
+	unsigned int satellite_sys : 3;
+	unsigned int reserved1 : 1;
+	unsigned int grouping : 1;
+	unsigned int signal_type : 5;
+	unsigned int forward_err_correction : 1;
+	unsigned int primary_L1_chan : 1;
+	unsigned int carrier_phase_meas : 1;
+	unsigned int reserved2 : 1;
+	unsigned int prn_lock_flag : 1;
+	unsigned int channel_assignment : 1;
 });
 
 /*!
