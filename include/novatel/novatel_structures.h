@@ -51,6 +51,19 @@ namespace novatel {
 #define MAX_NUM_SAT 28	// Maximum number of satellites with information in the RTKDATA log
 #define HEADER_SIZE 28 // Binary header size for OEM 4, V, and 6 receivers
 #define SHORT_HEADER_SIZE 12 // short binary header size
+#define CHECKSUM_SIZE 4  // size of the message CRC
+
+
+#define SYNC_BYTE_1 0xAA
+#define SYNC_BYTE_2 0x44
+#define SYNC_BYTE_3 0x12
+
+#define SYNC_1_IDX 0 	// first sync byte location
+#define SYNC_2_IDX 1 	// second sync byte location
+#define SYNC_3_IDX 2 	// third sync byte location
+#define HEADER_LEN_IDX 3 // header length location
+#define MSG_ID_END_IDX 5	// Message ID location
+#define MSG_LENGTH_END_IDX 9 // message length index
 
 // IMU Constants
 // scale factor between integer counts and change in velocity in m/s for AG11 and AG58

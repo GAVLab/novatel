@@ -855,31 +855,29 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
             log_warning_("Overflowed receive buffer. Buffer cleared.");
 		}
 
-		if (buffer_index_ == 0) {	// looking for beginning of message
-			if (message[ii] == 0xAA) {	// beginning of msg found - add to buffer
+		if (buffer_index_ == SYNC_1_IDX) {	// looking for beginning of message
+			if (message[ii] == SYNC_BYTE_1) {	// beginning of msg found - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
 				bytes_remaining_ = 0;
 			} else if (message[ii] == '<') {
 				// received beginning of acknowledgement
 				reading_acknowledgement_ = true;
-				buffer_index_ = 1;
-			} else {
-        //log_debug_("BufferIncomingData::Received unknown data.");
-			}
-		} else if (buffer_index_ == 1) {	// verify 2nd character of header
-			if (message[ii] == 0x44) {	// 2nd byte ok - add to buffer
+				buffer_index_++;
+			} 
+		} else if (buffer_index_ == SYNC_2_IDX) {	// verify 2nd character of header
+			if (message[ii] == SYNC_BYTE_2) {	// 2nd byte ok - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
 			} else if ( (message[ii] == 'O') && reading_acknowledgement_ ) {
 				// 2nd byte of acknowledgement
-				buffer_index_ = 2;
+				buffer_index_++;
 			} else {
 				// start looking for new message again
 				buffer_index_ = 0;
 				bytes_remaining_=0;
 				reading_acknowledgement_=false;
 			} // end if (msg[i]==0x44)
-		} else if (buffer_index_ == 2) {	// verify 3rd character of header
-			if (message[ii] == 0x12) {	// 2nd byte ok - add to buffer
+		} else if (buffer_index_ == SYNC_3_IDX) {	// verify 3rd character of header
+			if (message[ii] == SYNC_BYTE_3) {	// 2nd byte ok - add to buffer
 				data_buffer_[buffer_index_++] = message[ii];
 			} else if ( (message[ii] == 'K') && (reading_acknowledgement_) ) {
 				// final byte of acknowledgement received
@@ -897,23 +895,23 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 				bytes_remaining_ = 0;
 				reading_acknowledgement_ = false;
 			} // end if (msg[i]==0x12)
-		} else if (buffer_index_ == 3) {	// number of bytes in header - not including sync
+		} else if (buffer_index_ == HEADER_LEN_IDX) {	// number of bytes in header - not including sync
 			data_buffer_[buffer_index_++] = message[ii];
 			// length of header is in byte 4
 			header_length_ = message[ii];
-		} else if (buffer_index_ == 5) { // get message id
+		} else if (buffer_index_ == MSG_ID_END_IDX) { // get message id
 			data_buffer_[buffer_index_++] = message[ii];
 			bytes_remaining_--;
-			message_id = BINARY_LOG_TYPE( ((data_buffer_[buffer_index_-1]) << 8) + data_buffer_[buffer_index_-2] );
+			message_id = BINARY_LOG_TYPE( ((data_buffer_[MSG_ID_END_IDX]) << 8) + data_buffer_[MSG_ID_END_IDX-1] );
 		// } else if (buffer_index_ == 8) {	// set number of bytes
 		// 	data_buffer_[buffer_index_++] = message[ii];
 		// 	// length of message is in byte 8
 		// 	// bytes remaining = remainder of header  + 4 byte checksum + length of body
 		// 	// TODO: added a -2 to make things work right, figure out why i need this
 		// 	bytes_remaining_ = message[ii] + 4 + (header_length_-7) - 2;
-		} else if (buffer_index_ == 9) {
+		} else if (buffer_index_ == MSG_LENGTH_END_IDX) {
 			data_buffer_[buffer_index_++] = message[ii];
-			bytes_remaining_ = (header_length_ - 10) + 4 + (data_buffer_[9] << 8) + data_buffer_[8];
+			bytes_remaining_ = (header_length_ - 10) + CHECKSUM_SIZE + (data_buffer_[9] << 8) + data_buffer_[8];
 		} else if (bytes_remaining_ == 1) {	// add last byte and parse
 			data_buffer_[buffer_index_++] = message[ii];
 			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
