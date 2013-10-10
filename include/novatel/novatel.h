@@ -262,6 +262,8 @@ public:
 
     bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
 
+    void ReadFromFile(unsigned char* buffer, unsigned int length);
+
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
