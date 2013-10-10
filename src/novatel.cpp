@@ -422,7 +422,7 @@ void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
 
 void Novatel::SetPositionTimeout(uint32_t seconds){
     try {
-        if(0<=seconds<=86400) {
+        if(seconds<=86400) {
             std::stringstream pdp_cmd;
             pdp_cmd << "POSTIMEOUT " << seconds;
             bool result = SendCommand(pdp_cmd.str());
@@ -908,18 +908,14 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 			data_buffer_[buffer_index_++] = message[ii];
 			bytes_remaining_--;
 			message_id = BINARY_LOG_TYPE( ((data_buffer_[MSG_ID_END_IDX]) << 8) + data_buffer_[MSG_ID_END_IDX-1] );
-		// } else if (buffer_index_ == 8) {	// set number of bytes
-		// 	data_buffer_[buffer_index_++] = message[ii];
-		// 	// length of message is in byte 8
-		// 	// bytes remaining = remainder of header  + 4 byte checksum + length of body
-		// 	// TODO: added a -2 to make things work right, figure out why i need this
-		// 	bytes_remaining_ = message[ii] + 4 + (header_length_-7) - 2;
 		} else if (buffer_index_ == MSG_LENGTH_END_IDX) {
 			data_buffer_[buffer_index_++] = message[ii];
-			bytes_remaining_ = (header_length_ - 10) + CHECKSUM_SIZE + (data_buffer_[9] << 8) + data_buffer_[8];
+	    //length of message is in byte 9 and 10
+	    //bytes remaining = remainder of header (header length - data read so far)
+			//   + 4 byte checksum + length of body
+			bytes_remaining_ = (header_length_ - (MSG_LENGTH_END_IDX+1)) + CHECKSUM_SIZE + (data_buffer_[MSG_LENGTH_END_IDX] << 8) + data_buffer_[MSG_LENGTH_END_IDX-1];
 		} else if (bytes_remaining_ == 1) {	// add last byte and parse
 			data_buffer_[buffer_index_++] = message[ii];
-			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
 			// log_info_("Sending to ParseBinary");
 			ParseBinary(data_buffer_, buffer_index_, message_id);
 			// reset counters
