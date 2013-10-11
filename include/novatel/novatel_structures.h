@@ -47,7 +47,7 @@ namespace novatel {
 #define MAX_NOUT_SIZE 8192 // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
 #define EPH_CHAN 33
 #define NUMSAT 14
-#define MAX_CHAN	28  // Maximum number of signal channels
+#define MAX_CHAN	54  // Maximum number of signal channels
 #define MAX_NUM_SAT 28	// Maximum number of satellites with information in the RTKDATA log
 #define HEADER_SIZE 28 // Binary header size for OEM 4, V, and 6 receivers
 #define SHORT_HEADER_SIZE 12 // short binary header size
