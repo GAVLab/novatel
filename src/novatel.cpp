@@ -424,7 +424,7 @@ void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
 
 void Novatel::SetPositionTimeout(uint32_t seconds){
     try {
-        if(0<=seconds<=86400) {
+        if(seconds<=86400) {
             std::stringstream pdp_cmd;
             pdp_cmd << "POSTIMEOUT " << seconds;
             bool result = SendCommand(pdp_cmd.str());
