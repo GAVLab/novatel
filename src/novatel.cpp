@@ -1328,6 +1328,8 @@ double Novatel::UnpackCompressedPsrStd(const uint16_t &val) const
     case 15:
         return(152.000);
         break;
+    default:
+        return(0);
    }
 }
 
