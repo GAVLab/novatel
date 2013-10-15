@@ -48,15 +48,23 @@ find_package(Boost REQUIRED COMPONENTS system filesystem thread)
 ## Specify additional locations of header files
 include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
+
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  set(LIB_NAME novatel_d)
+  MESSAGE("Building DEBUG library ${LIB_NAME}")
+else ()
+  set(LIB_NAME novatel)
+  MESSAGE("Building RELEASE library ${LIB_NAME}")
+endif ()
+
 # Declare a cpp library
-add_library(novatel
+add_library(${LIB_NAME}
   src/novatel.cpp
 )
 
-target_link_libraries(novatel
-  ${Boost_LIBRARIES}
-  ${catkin_LIBRARIES}
-)
+target_link_libraries(${LIB_NAME}
+                      ${Boost_LIBRARIES}
+                      ${catkin_LIBRARIES})
 
 ##############
 ## Examples ##
@@ -78,13 +86,22 @@ endif(serial_FOUND)
 if (NOVATEL_BUILD_EXAMPLES)
 	# Declare a cpp executable
 	add_executable(novatel_example examples/novatel_example.cpp)
-	target_link_libraries(novatel_example novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(novatel_example 
+                        ${LIB_NAME}
+                        ${catkin_LIBRARIES} 
+                        ${Boost_LIBRARIES})
 
   add_executable(novatel_read_from_file examples/novatel_read_from_file.cpp)
-  target_link_libraries(novatel_read_from_file novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  target_link_libraries(novatel_read_from_file 
+                        ${LIB_NAME}
+                        ${catkin_LIBRARIES} 
+                        ${Boost_LIBRARIES})
 
 	add_executable(novatel_read_bestutm examples/novatel_read_bestutm.cpp)
-	target_link_libraries(novatel_read_bestutm novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(novatel_read_bestutm 
+                        ${LIB_NAME}
+                        ${catkin_LIBRARIES} 
+                        ${Boost_LIBRARIES})
 endif (NOVATEL_BUILD_EXAMPLES)
 
 # Build ROS node
@@ -114,7 +131,7 @@ if(BUILD_WITH_ROS)
     PATTERN ".svn" EXCLUDE
   )
 else(BUILD_WITH_ROS) # do a classical install
-  install(TARGETS novatel
+  install(TARGETS ${LIB_NAME}
     ARCHIVE DESTINATION /usr/local/lib
     LIBRARY DESTINATION /usr/local/lib
     RUNTIME DESTINATION /usr/local/bin/${PROJECT_NAME}
