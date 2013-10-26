@@ -65,6 +65,18 @@ namespace novatel {
 #define MSG_ID_END_IDX 5	// Message ID location
 #define MSG_LENGTH_END_IDX 9 // message length index
 
+#define NOVATEL_SYNC_BYTE_1 0xAA
+#define NOVATEL_SYNC_BYTE_2 0x44
+#define NOVATEL_SYNC_BYTE_3 0x12
+#define NOVATEL_ACK_BYTE_1 '<'
+#define NOVATEL_ACK_BYTE_2 'O'
+#define NOVATEL_ACK_BYTE_3 'K'
+#define NOVATEL_RESET_BYTE_1 0X5B
+#define NOVATEL_RESET_BYTE_2 'C'
+#define NOVATEL_RESET_BYTE_3 'O'
+#define NOVATEL_RESET_BYTE_4 'M'
+#define NOVATEL_RESET_BYTE_6 0X5D
+
 // IMU Constants
 // scale factor between integer counts and change in velocity in m/s for AG11 and AG58
 #define VELOCITY_CHANGE_SCALE_FACTOR_11_58 (0.3048/((double)134217728.0))
@@ -86,6 +98,15 @@ namespace novatel {
 //*******************************************************************************
 // HEADER STRUCTURES
 //*******************************************************************************
+/*!
+ * Message Type
+ */
+PACK(
+struct MessageType {
+    unsigned reserved:5;
+    MessageFormat format:2;
+    ResponseBit response:1;
+});
 
 //! Header prepended to OEM4 binary messages
 PACK(
@@ -96,7 +117,7 @@ struct Oem4BinaryHeader
    uint8_t          sync3;          //!< start of packet third  byte (0x12)
    uint8_t          header_length; 	//!< Length of the header in bytes ( From start of packet )
    uint16_t         message_id;    	//!< Message ID number
-   uint8_t          message_type;  	//!< Message type - binary, ascii, nmea, etc...
+   MessageType      message_type;  	//!< Message type - binary, ascii, nmea, etc...
    uint8_t          port_address;  	//!< Address of the data port the log was received on
    uint16_t         message_length;	//!< Message length (Not including header or CRC)
    uint16_t         sequence;      	//!< Counts down from N-1 to 0 for multiple related logs
@@ -688,9 +709,9 @@ struct RangeMeasurements {
  */
 PACK( 
 struct CompressedRangeRecord {
-    int64_t doppler:28;                             //!< Doppler frequency [Hz]
-    uint64_t pseudorange:36;                         //!<  pseudorange [m]
-    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]
+    int64_t doppler:28;                             //!< Doppler frequency [Hz]; SF = 1/256
+    uint64_t pseudorange:36;                         //!<  pseudorange [m]; SF = 1/128
+    int32_t accumulated_doppler:32;                //!< accumulated doppler [cycles]; SF = 1/256
     uint16_t pseudorange_standard_deviation:4;      //!< pseudorange standard deviation [m]
     uint16_t accumulated_doppler_std_deviation:4;   //!< accumulated doppler standard deviation [cycles]
     uint16_t satellite_prn:8;                       //!< SV PRN number
@@ -760,9 +781,9 @@ struct GpsEphemeris
     uint32_t issue_of_data_clock;   //!< issue of data clock
     double sv_clock_correction;     //!< SV clock correction term (s)
     double group_delay_difference;  //!< estimated group delay difference
-    double clock_aligning_param_0;  //!< clock aiging parameter 0
-    double clock_aligning_param_1;  //!< clock aiging parameter 1
-    double clock_aligning_param_2;  //!< clock aiging parameter 2
+    double clock_aligning_param_0;  //!< clock aging parameter 0
+    double clock_aligning_param_1;  //!< clock aging parameter 1
+    double clock_aligning_param_2;  //!< clock aging parameter 2
     yes_no anti_spoofing;           //!< anti spoofing on
     double corrected_mean_motion;   //!< corrected mean motion
     double range_accuracy_variance; //!< user range accuracy variance
@@ -789,13 +810,71 @@ struct RawEphemeris {
     uint32_t prn;                       //!< Satellite PRN number
     uint32_t ephem_reference_week_num;  //!< Ephemeris reference week number
     uint32_t ephem_reference_seconds;   //!< Ephemeris reference time [sec]
-    Subframe subframe1;                 //!< Subframe 1 data
-    Subframe subframe2;                 //!< Subframe 2 data
-    Subframe subframe3;                 //!< Subframe 3 data
+    uint8_t subframe1[30];              //!< Subframe 1 data
+    uint8_t subframe2[30];              //!< Subframe 2 data
+    uint8_t subframe3[30];              //!< Subframe 3 data
     uint8_t crc[4];                     //!< 32-bit cyclic redundancy check (CRC)
+});
+PACK(
+struct RawEphemerides {
+    RawEphemeris ephemeris[MAX_NUM_SAT];
+});
+
+/*!
+ * RAWALM Message Structure
+ * Contains the undecoded almanac subframes as received from the satellite
+ */
+PACK(
+struct RawAlmanacData
+{
+	uint16_t svid;
+    uint8_t subframe[30];			// 30 bytes of subframe page data
+});
+PACK(
+struct RawAlmanac
+{
+	Oem4BinaryHeader header;
+	uint32_t ref_week;
+	uint32_t ref_time;			// [sec]
+	uint32_t num_of_subframes;	// numbers of subframes to follow
+	RawAlmanacData subframe_data;
+	uint8_t crc[4];
 
 });
 
+/*!
+ * ALMANAC
+ * Contains decoded almanac parameters from Subframes 4 and 5 with parity 
+ * info removed.
+ */
+PACK(
+struct AlmanacData {
+	uint32_t prn;
+	uint32_t ref_week;
+	double ref_time;					//!< [sec]
+	double eccentricity;			
+	double right_ascension_rate;		//!< [rad/sec]
+	double right_ascension;				//!< [rad]
+	double perigee;						//!< [rad]
+	double mean_anomoly_of_ref_time;	//!< [rad]
+	double clock_aging_param_0;			//!< [sec]
+	double clock_aging_param_1;			//!< [sec/sec]
+	double corrected_mean_motion;		//!< [rad/sec]
+	double semi_major_axis;				//!< [m]
+	double inclination_angle;			//!< [rad] Angle of inclination relative to .3*pi
+	uint32_t sv_configuration;			//!< 
+	uint32_t sv_health;					//!< (6 bits) From Page 25 of subframe 4 or 5
+	uint32_t sv_health_from_almanac;	//!< (8 bits) 
+	true_false anti_spoofing;			//!< 
+});
+PACK(
+struct Almanac {
+	Oem4BinaryHeader header;
+	int32_t number_of_prns;
+	AlmanacData data[MAX_NUM_SAT];
+	uint8_t crc[4];
+
+});
 
 /*!
  * Satellite Position Structure

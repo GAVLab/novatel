@@ -6,6 +6,7 @@
 
 namespace novatel {
 
+#define THISPORT 0xc0
 //*******************************************************************************
 // USER-DEFINED ENUMS
 //*******************************************************************************
@@ -132,6 +133,20 @@ enum SolutionStatus
 	PENDING,			//!< when a fix position command is entered, the receiver computes its own position and determines if the fixed position is valid
 	INVALID_FIX,		//!< the fixed position entered using the fix position command is not valid
 	UNAUTHORIZED
+};
+
+enum MessageFormat //!< Bits 5-6 of MessageType struct
+{
+    BINARY = 0b00,
+    ASCII = 0b01,
+    ABREVIATED_ASCII = 0b10,
+    NMEA = 0b11,
+};
+
+enum ResponseBit //!< Last bit (7) of MessageType struct
+{
+    ORIGINAL_MESSAGE = 0b0,
+    RESPONSE_MESSAGE = 0b1,
 };
 
 enum PositionType

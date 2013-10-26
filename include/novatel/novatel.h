@@ -42,7 +42,6 @@
 #include <string>
 #include <cstring> // for size_t
 
-// #include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -97,6 +96,8 @@ typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCall
 typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
 typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
+typedef boost::function<void(RawAlmanac&, double&)> RawAlmanacCallback;
+typedef boost::function<void(Almanac&, double&)> AlmanacCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
 typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
@@ -194,7 +195,8 @@ public:
 
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
-    bool SendCommand(std::string cmd_msg);
+    bool SendCommand(std::string cmd_msg, bool wait_for_ack=true);
+    bool SendMessage(uint8_t* msg_ptr, size_t length);
 
     /*!
      * SetSvElevationCutoff
@@ -225,7 +227,7 @@ public:
 
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
-
+    bool InjectAlmanac(Almanac almanac);
     /*!
      * SetL1CarrierSmoothing sets the amount of smoothing to be performed on
      * code measurements. L2 smoothing is available in OEMV receivers, but
@@ -255,6 +257,8 @@ public:
      */
     bool ColdStartReset();
 
+    void SendRawEphemeridesToReceiver(RawEphemerides raw_ephemerides);
+
     /*!
      * Requests version information from the receiver
      *
@@ -266,8 +270,6 @@ public:
 	bool UpdateVersion();
 
     bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
-
-    void ReadFromFile(unsigned char* buffer, unsigned int length);
 
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
@@ -314,6 +316,10 @@ public:
         gps_ephemeris_callback_=handler;};
     void set_raw_ephemeris_callback(RawEphemerisCallback handler){
         raw_ephemeris_callback_=handler;};
+    void set_raw_almanc_callback(RawAlmanacCallback handler){
+        raw_almanac_callback_=handler;};
+    void set_almanac_callback(AlmanacCallback handler){
+        almanac_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
     void set_satellite_visibility_callback(SatelliteVisibilityCallback handler){
@@ -372,15 +378,6 @@ private:
 	void ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE message_id);
 
 	bool ParseVersion(std::string packet);
-
-	void UnpackCompressedRangeData(const CompressedRangeData &cmp,
-	                                     RangeData           &rng);
-
-	double UnpackCompressedPsrStd(const uint16_t &val) const;
-
-	double UnpackCompressedAccumulatedDoppler(
-	    const CompressedRangeData &cmp,
-	    const double              &uncmpPsr) const;
 
 
     //////////////////////////////////////////////////////
