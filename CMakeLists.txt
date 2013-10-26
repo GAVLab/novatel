@@ -8,9 +8,9 @@ project(novatel)
 
 option(BUILD_WITH_ROS "Build ROS node and use catkin." ON)
 
-# if (NOT catkin_FOUND)
-#   SET(BUILD_WITH_ROS OFF)
-# endif(NOT catkin_FOUND)
+if (NOT catkin_FOUND)
+   SET(BUILD_WITH_ROS OFF)
+endif(NOT catkin_FOUND)
 
 if (BUILD_WITH_ROS)
   ## Find catkin macros and libraries

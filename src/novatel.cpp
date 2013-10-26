@@ -4,6 +4,7 @@
 #include <iostream>
 #include <valarray>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 using namespace std;
@@ -66,10 +67,19 @@ inline double DefaultGetTime() {
 	return (double)(duration.total_milliseconds())/1000.0;
 }
 
+inline void SaveMessageToFile(unsigned char *message, size_t length, const char *filename) {
+    ofstream outfile;
+    outfile.open(filename, ios::out | ios::app); // "./test_data/filename.txt"
+    if(outfile.is_open()) {
+        for (int index =0; index < length; index++) {
+            outfile << message[index];
+        }
+    }
+    outfile.close();
+}
 
 
-
-inline void printHex(char *data, int length) {
+inline void printHex(unsigned char *data, int length) {
   for (int i = 0; i < length; ++i) {
     printf("0x%X ", (unsigned) (unsigned char) data[i]);
   }
@@ -134,7 +144,7 @@ inline void DefaultRawEphemCallback(RawEphemeris ephemeris, double time_stamp) {
 Novatel::Novatel() {
 	serial_port_=NULL;
 	reading_status_=false;
-	time_handler_ = DefaultGetTime;
+    time_handler_ = DefaultGetTime;
     handle_acknowledgement_=DefaultAcknowledgementHandler;
     best_position_callback_=DefaultBestPositionCallback;
     raw_ephemeris_callback_=DefaultRawEphemCallback;
@@ -161,9 +171,10 @@ bool Novatel::Connect(std::string port, int baudrate, bool search) {
 
 	if (!connected && search) {
 		// search additional baud rates
-		int bauds_to_search[5]={9600,19200,38400,57600,115200};
+
+        int bauds_to_search[9]={1200,2400,4800,9600,19200,38400,57600,115200,230400};
 		bool found = false;
-		for (int ii=0; ii<5; ii++){
+        for (int ii=0; ii<9; ii++){
 			std::stringstream search_msg;
 			search_msg << "Searching for receiver with baudrate: " << bauds_to_search[ii];
 			log_info_(search_msg.str());
@@ -489,7 +500,7 @@ void Novatel::PDPModeConfigure(PDPMode mode, PDPDynamics dynamics) {
 
 void Novatel::SetPositionTimeout(uint32_t seconds){
     try {
-        if(0<=seconds<=86400) {
+        if(seconds<=86400) {
             std::stringstream pdp_cmd;
             pdp_cmd << "POSTIMEOUT " << seconds;
             bool result = SendCommand(pdp_cmd.str());
@@ -514,6 +525,24 @@ bool Novatel::SetInitialTime(uint32_t gps_week, double gps_seconds) {
     time_cmd << "SETAPPROXTIME " << gps_week << " " << gps_seconds;
     return SendCommand(time_cmd.str());
 }
+/*
+uint8_t          sync1;          //!< start of packet first byte (0xAA)
+uint8_t          sync2;          //!< start of packet second byte (0x44)
+uint8_t          sync3;          //!< start of packet third  byte (0x12)
+uint8_t          header_length; 	//!< Length of the header in bytes ( From start of packet )
+uint16_t         message_id;    	//!< Message ID number
+uint8_t          message_type;  	//!< Message type - binary, ascii, nmea, etc...
+uint8_t          port_address;  	//!< Address of the data port the log was received on
+uint16_t         message_length;	//!< Message length (Not including header or CRC)
+uint16_t         sequence;      	//!< Counts down from N-1 to 0 for multiple related logs
+uint8_t          idle;          	//!< Time the processor was idle in last sec between logs with same ID
+uint8_t          time_status;    //!< Indicates the quality of the GPS time
+uint16_t         gps_week;      	//!< GPS Week number
+uint32_t         gps_millisecs; 	//!< Milliseconds into week
+uint32_t         status;        	//!< Receiver status word
+uint16_t         Reserved;      	//!< Reserved for internal use
+uint16_t         version;       	//!< Receiver software build number (0-65535)
+*/
 
 bool Novatel::InjectAlmanac(Almanac almanac) {
     try {
@@ -1013,7 +1042,6 @@ void Novatel::ReadSerialPort() {
 	
 }
 
-
 void Novatel::ReadFromFile(unsigned char* buffer, unsigned int length)
 {
 	BufferIncomingData(buffer, length);
@@ -1266,6 +1294,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 
             // Copy header and #observations following
             memcpy(&ranges, message, header_length+4);
+
             //Copy repeated fields
             memcpy(&ranges.range_data,
                    message + header_length + 4,
@@ -1282,6 +1311,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             }
 
             break;
+
         case RANGECMPB_LOG_TYPE: {
 	          CompressedRangeMeasurements cmp_ranges;
 	        	header_length = (uint16_t) *(message + 3);
@@ -1372,10 +1402,16 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             RawEphemeris raw_ephemeris;
 
             memcpy(&raw_ephemeris, message, sizeof(raw_ephemeris));
+//            cout << "Parse Log:" << endl;
+//            cout << "Length: " << length << endl;
+//            printHex(message, length);
+//            test_ephems_.ephemeris[raw_ephemeris.prn] = raw_ephemeris;
+
             if (raw_ephemeris_callback_)
                 raw_ephemeris_callback_(raw_ephemeris, read_timestamp_);
 
-// 
+//            bool result = SendBinaryDataToReceiver(message, length);
+
             break;}
         case RAWALMB_LOG_TYPE:
             RawAlmanac raw_almanac;
@@ -1489,40 +1525,6 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
     }
 }
-
-/* --------------------------------------------------------------------------
-Calculate a CRC value to be used by CRC calculation functions.
--------------------------------------------------------------------------- */
-unsigned long Novatel::CRC32Value(int i)
-{
-  int j;
-  unsigned long ulCRC;
-  ulCRC = i;
-  for ( j = 8 ; j > 0; j-- ) {
-    if ( ulCRC & 1 )
-      ulCRC = ( ulCRC >> 1 ) ^ CRC32_POLYNOMIAL;
-    else
-      ulCRC >>= 1;
-  }
-    return ulCRC;
-}
-
-
-/* --------------------------------------------------------------------------
-Calculates the CRC-32 of a block of data all at once
--------------------------------------------------------------------------- */
-unsigned long Novatel::CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
-                                             unsigned char *ucBuffer ) /* Data block */
-{
-  unsigned long ulTemp1;
-  unsigned long ulTemp2;
-  unsigned long ulCRC = 0;
-  while ( ulCount-- != 0 ) {
-    ulTemp1 = ( ulCRC >> 8 ) & 0x00FFFFFFL;
-    ulTemp2 = CRC32Value( ((int) ulCRC ^ *ucBuffer++ ) & 0xff );
-    ulCRC = ulTemp1 ^ ulTemp2;
-  }
-  return( ulCRC );
 
 void Novatel::UnpackCompressedRangeData(const CompressedRangeData &cmp,
                                               RangeData           &rng)
@@ -1710,6 +1712,41 @@ double Novatel::UnpackCompressedAccumulatedDoppler(
   }
 
   return(scaled_adr - (CMP_MAX_VALUE * (int)adr_rolls));
+}
+
+/* --------------------------------------------------------------------------
+Calculate a CRC value to be used by CRC calculation functions.
+-------------------------------------------------------------------------- */
+unsigned long Novatel::CRC32Value(int i)
+{
+  int j;
+  unsigned long ulCRC;
+  ulCRC = i;
+  for ( j = 8 ; j > 0; j-- ) {
+    if ( ulCRC & 1 )
+      ulCRC = ( ulCRC >> 1 ) ^ CRC32_POLYNOMIAL;
+    else
+      ulCRC >>= 1;
+  }
+    return ulCRC;
+}
+
+
+/* --------------------------------------------------------------------------
+Calculates the CRC-32 of a block of data all at once
+-------------------------------------------------------------------------- */
+unsigned long Novatel::CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
+                                             unsigned char *ucBuffer ) /* Data block */
+{
+  unsigned long ulTemp1;
+  unsigned long ulTemp2;
+  unsigned long ulCRC = 0;
+  while ( ulCount-- != 0 ) {
+    ulTemp1 = ( ulCRC >> 8 ) & 0x00FFFFFFL;
+    ulTemp2 = CRC32Value( ((int) ulCRC ^ *ucBuffer++ ) & 0xff );
+    ulCRC = ulTemp1 ^ ulTemp2;
+  }
+  return( ulCRC );
 }
 
 // this functions matches the conversion done by the Novatel receivers

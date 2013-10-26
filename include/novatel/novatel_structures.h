@@ -537,8 +537,6 @@ struct Dop {
 // MESSAGE SPECIFIC GPS STRUCTURES
 //*******************************************************************************
 
-
-
 /*!
  * BSLNXYZ Message Structure
  * This log contains the receiver’s RTK baseline
@@ -796,14 +794,6 @@ struct GpsEphemeris
  * and three from the satellite with the parity information removed.
  * Ephemeris older than 6 hours is not output
  */
-PACK(
-struct Word {
-    uint8_t byte[3];
-});
-PACK(
-struct Subframe {
-    Word word[10];
-});
 PACK(
 struct RawEphemeris {
     Oem4BinaryHeader header;
