@@ -853,7 +853,6 @@ void Novatel::ReadFromFile(unsigned char* buffer, unsigned int length)
 void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 {
 
-	BINARY_LOG_TYPE message_id;
 	// add incoming data to buffer
 	for (unsigned int ii=0; ii<length; ii++) {
 		// make sure bufIndex is not larger than buffer
@@ -911,7 +910,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 		} else if (buffer_index_ == 5) { // get message id
 			data_buffer_[buffer_index_++] = message[ii];
 			bytes_remaining_--;
-			message_id = BINARY_LOG_TYPE( ((data_buffer_[buffer_index_-1]) << 8) + data_buffer_[buffer_index_-2] );
+			message_id_ = BINARY_LOG_TYPE( ((data_buffer_[buffer_index_-1]) << 8) + data_buffer_[buffer_index_-2] );
 		// } else if (buffer_index_ == 8) {	// set number of bytes
 		// 	data_buffer_[buffer_index_++] = message[ii];
 		// 	// length of message is in byte 8
@@ -925,7 +924,7 @@ void Novatel::BufferIncomingData(unsigned char *message, unsigned int length)
 			data_buffer_[buffer_index_++] = message[ii];
 			// BINARY_LOG_TYPE message_id = (BINARY_LOG_TYPE) (((data_buffer_[5]) << 8) + data_buffer_[4]);
 			// log_info_("Sending to ParseBinary");
-			ParseBinary(data_buffer_, buffer_index_, message_id);
+			ParseBinary(data_buffer_, buffer_index_, message_id_);
 			// reset counters
 			buffer_index_ = 0;
 			bytes_remaining_ = 0;

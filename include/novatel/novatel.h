@@ -454,6 +454,7 @@ private:
 	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
 	double parse_timestamp_;		//!< time stamp when last parse began
+	BINARY_LOG_TYPE message_id_;	//!< message id of message currently being buffered
 
     boost::condition_variable ack_condition_;
     boost::mutex ack_mutex_;
