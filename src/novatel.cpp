@@ -1117,17 +1117,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 	        	       message + header_length + payload_length,
 	        	       4);
 
-	        	RangeMeasurements rng;
-
-	        	rng.header = cmp_ranges.header;
-	        	rng.number_of_observations = cmp_ranges.number_of_observations;
-	        	memcpy(rng.crc, cmp_ranges.crc, 4);
-
-	        	for (size_t kk = 0; kk < cmp_ranges.number_of_observations; ++kk)
-	        	{
-	        	  UnpackCompressedRangeData(cmp_ranges.range_data[kk],
-	        	                            rng.range_data[kk]);
-	        	}
+	        	
 
 	        	// asdf << "sizeof after memcpy : " << sizeof(cmp_ranges) << "\n";
 	        	// asdf << "crc after shoving: " ;
@@ -1149,7 +1139,18 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
 
 	            if (range_measurements_callback_)
 	            {
-	              range_measurements_callback_(rng, read_timestamp_);
+                    RangeMeasurements rng;
+
+                    rng.header = cmp_ranges.header;
+                    rng.number_of_observations = cmp_ranges.number_of_observations;
+                    memcpy(rng.crc, cmp_ranges.crc, 4);
+
+                    for (size_t kk = 0; kk < cmp_ranges.number_of_observations; ++kk)
+                    {
+                      UnpackCompressedRangeData(cmp_ranges.range_data[kk],
+                                                rng.range_data[kk]);
+                    }
+	                range_measurements_callback_(rng, read_timestamp_);
 	            }
 
 	            break;
