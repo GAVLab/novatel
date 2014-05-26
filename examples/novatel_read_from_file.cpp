@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
   if (argc != 2)
   {
     std::cout << "Incorrect number of input arguments" << std::endl;
+    return -1;
 	}
 
   // Load the input filename
