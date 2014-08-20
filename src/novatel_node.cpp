@@ -79,6 +79,7 @@ public:
 
     gps_.set_best_utm_position_callback(boost::bind(&NovatelNode::BestUtmHandler, this, _1, _2));
     gps_.set_best_velocity_callback(boost::bind(&NovatelNode::BestVelocityHandler, this, _1, _2));
+    gps_.set_best_position_ecef_callback(boost::bind(&NovatelNode::BestPositionEcefHandler, this, _1, _2));
     //gps_.set_ins_position_velocity_attitude_short_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
     //gps_.set_ins_covariance_short_callback(boost::bind(&NovatelNode::InsCovHandler, this, _1, _2));
     gps_.set_ins_position_velocity_attitude_callback(boost::bind(&NovatelNode::InsPvaHandler, this, _1, _2));
@@ -431,10 +432,36 @@ public:
     sat_fix.position_covariance[4] = pow(cur_utm_bestpos_.northing_standard_deviation, 2);
     sat_fix.position_covariance[8] = pow(cur_utm_bestpos_.height_standard_deviation, 2);
 
+
+
     psrpos_publisher_.publish(sat_fix);
 
   }
 
+  void BestPositionEcefHandler(PositionEcef &best_xyz, double timestamp) {
+    nav_msgs::Odometry ecef_pos;
+
+    ecef_pos.header.stamp = ros::Time::now();
+    ecef_pos.header.frame_id = "/ecef";
+    ecef_pos.pose.pose.position.x = best_xyz.x_position;
+    ecef_pos.pose.pose.position.y = best_xyz.y_position;
+    ecef_pos.pose.pose.position.z = best_xyz.z_position;
+
+    ecef_pos.pose.covariance[1] = pow(best_xyz.x_standard_deviation,2);
+    ecef_pos.pose.covariance[8] = pow(best_xyz.y_standard_deviation,2);
+    ecef_pos.pose.covariance[15] = pow(best_xyz.z_standard_deviation,2);
+
+    ecef_pos.twist.twist.linear.x = best_xyz.x_velocity;
+    ecef_pos.twist.twist.linear.y = best_xyz.y_velocity;
+    ecef_pos.twist.twist.linear.z = best_xyz.z_velocity;
+
+    ecef_pos.twist.covariance[1] = pow(best_xyz.x_velocity_standard_deviation,2);
+    ecef_pos.twist.covariance[8] = pow(best_xyz.y_velocity_standard_deviation,2);
+    ecef_pos.twist.covariance[15] = pow(best_xyz.z_velocity_standard_deviation,2);
+
+    ecefpos_publisher_.publish(ecef_pos);
+
+  }
 
   void RawMsgHandler(unsigned char *msg) {
     // ROS_INFO_STREAM("RAW RANGE MSG\n\tsizeof: " << sizeof(msg));
@@ -452,6 +479,7 @@ public:
     this->ephemeris_publisher_ = nh_.advertise<gps_msgs::Ephemeris>(ephemeris_topic_,0);
     this->dual_band_range_publisher_ = nh_.advertise<gps_msgs::L1L2Range>(dual_band_range_topic_,0);
     this->psrpos_publisher_ = nh_.advertise<sensor_msgs::NavSatFix>(psrpos_topic_,0);
+    this->ecefpos_publisher_ = nh_.advertise<nav_msgs::Odometry>(ecefpos_topic_,0);
 
     //em_.setDataCallback(boost::bind(&EM61Node::HandleEmData, this, _1));
     gps_.Connect(port_,baudrate_);
@@ -597,6 +625,9 @@ protected:
     nh_.param("psrpos_topic", psrpos_topic_, std::string("gps_fix_psr"));
     ROS_INFO_STREAM(name_ << ": Pseudorange Position Topic: " << psrpos_topic_);
 
+    nh_.param("ecefpos_topic", ecefpos_topic_, std::string("gps_fix_ecef"));
+    ROS_INFO_STREAM(name_ << ": ECEF Position Topic: " << ecefpos_topic_);
+
     return true;
   }
 
@@ -610,6 +641,7 @@ protected:
   ros::Publisher ephemeris_publisher_;
   ros::Publisher dual_band_range_publisher_;
   ros::Publisher psrpos_publisher_;
+  ros::Publisher ecefpos_publisher_;
 
   Novatel gps_; //
 
@@ -619,6 +651,7 @@ protected:
   std::string ephemeris_topic_;
   std::string dual_band_range_topic_;
   std::string psrpos_topic_;
+  std::string ecefpos_topic_;
 
   std::string port_;
   std::string log_commands_;
