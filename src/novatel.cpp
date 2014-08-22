@@ -569,6 +569,7 @@ void Novatel::ConfigureLogs(std::string log_string) {
 				} else {
 					log_error_("No acknowledgement received for log: " + *it);
 				}
+				ii++;
 			} catch (std::exception &e) {
 				std::stringstream output;
 		        output << "Error configuring receiver logs: " << e.what();
@@ -988,7 +989,7 @@ void Novatel::ParseBinary(unsigned char *message, size_t length, BINARY_LOG_TYPE
             break;
         case INSPVAS_LOG_TYPE:
             InsPositionVelocityAttitudeShort ins_pva_short;
-            memcpy(&ins_pva, message, sizeof(ins_pva_short));
+            memcpy(&ins_pva_short, message, sizeof(ins_pva_short));
             if (ins_position_velocity_attitude_short_callback_)
             	ins_position_velocity_attitude_short_callback_(ins_pva_short, read_timestamp_);
             break;
