@@ -88,6 +88,7 @@ endif (NOVATEL_BUILD_EXAMPLES)
 if (BUILD_WITH_ROS)
 	# Declare a cpp executable
 	add_executable(novatel_node src/novatel_node.cpp)
+  add_dependencies(novatel_node ${catkin_EXPORTED_TARGETS})
 	target_link_libraries(novatel_node novatel ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif (BUILD_WITH_ROS)
 
