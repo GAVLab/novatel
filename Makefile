@@ -16,6 +16,16 @@ else
 	cd build && make
 endif
 
+no_ros:
+	@mkdir -p build
+	-mkdir -p bin
+	cd build && cmake $(CMAKE_FLAGS) -DBUILD_WITH_ROS=OFF ..
+ifneq ($(MAKE),)
+	cd build && $(MAKE)
+else
+	cd build && make
+endif
+
 clean:
 	-cd build && make clean
 	rm -rf build bin lib

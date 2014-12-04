@@ -44,13 +44,26 @@
 
 namespace novatel {
 
-#define MAX_NOUT_SIZE      (8192)   // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
+#define MAX_NOUT_SIZE 8192 // Maximum size of a NovAtel log buffer (ALMANACA logs are big!)
 #define EPH_CHAN 33
 #define NUMSAT 14
-#define MAX_CHAN	28  // Maximum number of signal channels
+#define MAX_CHAN	54  // Maximum number of signal channels
 #define MAX_NUM_SAT 28	// Maximum number of satellites with information in the RTKDATA log
 #define HEADER_SIZE 28 // Binary header size for OEM 4, V, and 6 receivers
 #define SHORT_HEADER_SIZE 12 // short binary header size
+#define CHECKSUM_SIZE 4  // size of the message CRC
+
+
+#define SYNC_BYTE_1 0xAA
+#define SYNC_BYTE_2 0x44
+#define SYNC_BYTE_3 0x12
+
+#define SYNC_1_IDX 0 	// first sync byte location
+#define SYNC_2_IDX 1 	// second sync byte location
+#define SYNC_3_IDX 2 	// third sync byte location
+#define HEADER_LEN_IDX 3 // header length location
+#define MSG_ID_END_IDX 5	// Message ID location
+#define MSG_LENGTH_END_IDX 9 // message length index
 
 // IMU Constants
 // scale factor between integer counts and change in velocity in m/s for AG11 and AG58
@@ -614,22 +627,22 @@ struct IonosphericModel {
  */
 PACK(
 struct ChannelStatus {
-	unsigned tracking_state : 5;
-	unsigned sv_chan_num : 5;
-	unsigned phase_lock_flag : 1;
-	unsigned parity_known_flag : 1;
-	unsigned code_locked_flag : 1;
-	unsigned correlator_type : 3;
-	unsigned satellite_sys : 3;
-	unsigned reserved1 : 1;
-	unsigned grouping : 1;
-	unsigned signal_type : 5;
-	unsigned forward_err_correction : 1;
-	unsigned primary_L1_chan : 1;
-	unsigned carrier_phase_meas : 1;
-	unsigned reserved2 : 1;
-	unsigned prn_lock_flag : 1;
-	unsigned channel_assignment : 1;
+	unsigned int tracking_state : 5;
+	unsigned int sv_chan_num : 5;
+	unsigned int phase_lock_flag : 1;
+	unsigned int parity_known_flag : 1;
+	unsigned int code_locked_flag : 1;
+	unsigned int correlator_type : 3;
+	unsigned int satellite_sys : 3;
+	unsigned int reserved1 : 1;
+	unsigned int grouping : 1;
+	unsigned int signal_type : 5;
+	unsigned int forward_err_correction : 1;
+	unsigned int primary_L1_chan : 1;
+	unsigned int carrier_phase_meas : 1;
+	unsigned int reserved2 : 1;
+	unsigned int prn_lock_flag : 1;
+	unsigned int channel_assignment : 1;
 });
 
 /*!

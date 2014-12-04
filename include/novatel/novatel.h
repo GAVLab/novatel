@@ -60,6 +60,11 @@ namespace novatel {
 #define GRAD_A_RAD(g) ((g)*0.0174532925199433)
 #define CRC32_POLYNOMIAL 0xEDB88320L
 
+// Constants for unpacking RANGECMP
+#define CMP_MAX_VALUE         8388608.0
+#define CMP_GPS_WAVELENGTH_L1 0.1902936727984
+#define CMP_GPS_WAVELENGTH_L2 0.2442102134246
+
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -262,6 +267,8 @@ public:
 
     bool ConvertLLaUTM(double Lat, double Long, double *northing, double *easting, int *zone, bool *north);
 
+    void ReadFromFile(unsigned char* buffer, unsigned int length);
+
     // Set data callbacks
     void set_best_gps_position_callback(BestGpsPositionCallback handler){
         best_gps_position_callback_=handler;};
@@ -366,6 +373,15 @@ private:
 
 	bool ParseVersion(std::string packet);
 
+	void UnpackCompressedRangeData(const CompressedRangeData &cmp,
+	                                     RangeData           &rng);
+
+	double UnpackCompressedPsrStd(const uint16_t &val) const;
+
+	double UnpackCompressedAccumulatedDoppler(
+	    const CompressedRangeData &cmp,
+	    const double              &uncmpPsr) const;
+
 
     //////////////////////////////////////////////////////
     // Serial port reading members
@@ -438,6 +454,7 @@ private:
 	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
 	double parse_timestamp_;		//!< time stamp when last parse began
+	BINARY_LOG_TYPE message_id_;	//!< message id of message currently being buffered
 
     boost::condition_variable ack_condition_;
     boost::mutex ack_mutex_;
