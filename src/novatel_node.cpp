@@ -600,7 +600,8 @@ protected:
     nh_.param("baudrate", baudrate_, 9600);
     ROS_INFO_STREAM(name_ << ": Baudrate: " << baudrate_);
 
-    nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
+    //nh_.param("log_commands", log_commands_, std::string("BESTUTMB ONTIME 1.0"));
+    nh_.param("log_commands", log_commands_, std::string(""));
     ROS_INFO_STREAM(name_ << ": Log Commands: " << log_commands_);
 
     nh_.param("configure_port", configure_port_, std::string(""));
@@ -609,17 +610,17 @@ protected:
     nh_.param("gps_default_logs_period", gps_default_logs_period_, 0.05);
     ROS_INFO_STREAM(name_ << ": Default GPS logs period: " << gps_default_logs_period_);
 
-    nh_.param("span_default_logs_period", span_default_logs_period_, 0.05);
+    nh_.param("span_default_logs_period", span_default_logs_period_, 0.0);
     ROS_INFO_STREAM(name_ << ": Default SPAN logs period: " << span_default_logs_period_);
 
     nh_.param("ephem_log", ephem_log_, std::string(""));
     if (!ephem_log_.empty())
       ROS_INFO_STREAM(name_ << ": Ephemeris logging enabled: " << ephem_log_);
 
-    nh_.param("range_default_logs_period", range_default_logs_period_, 0.05);
+    nh_.param("range_default_logs_period", range_default_logs_period_, 0.00);
     ROS_INFO_STREAM(name_ << ": Default Range logs period: " << range_default_logs_period_);
 
-    nh_.param("psrpos_default_logs_period", psrpos_default_logs_period_, 0.05);
+    nh_.param("psrpos_default_logs_period", psrpos_default_logs_period_, 0.0);
     ROS_INFO_STREAM(name_ << ": Default Pseudorange Position logs period: " << psrpos_default_logs_period_);
 
     nh_.param("psrpos_topic", psrpos_topic_, std::string("gps_fix_psr"));
