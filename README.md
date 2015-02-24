@@ -1,8 +1,6 @@
 Novatel GPS Driver
 ==================
   
-***___DO NOT USE THIS BRANCH. IT IS BEING DEPRECATED.___***  
-
 This project provides a cross-platform interface for the Novatel OEM4 and OEMV series of GPS receivers.  The Novatel SPAN system is also supported. 
 
 The Novatel driver is written as a standlone library which depends on [Boost](http://http://www.boost.org) and a simple cross-platform serial port library [serial port library](https://github.com/wjwwood/serial).  It uses [Cmake](http://http://www.cmake.org) for the build system.  Example programs are provided that demonstrate the basic functionality of the library.
