@@ -42,7 +42,6 @@
 #include <string>
 #include <cstring> // for size_t
 
-// #include "novatel/generate_crc.hpp"
 // Structure definition headers
 #include "novatel/novatel_enums.h"
 #include "novatel/novatel_structures.h"
@@ -64,7 +63,6 @@ namespace novatel {
 #define CMP_MAX_VALUE         8388608.0
 #define CMP_GPS_WAVELENGTH_L1 0.1902936727984
 #define CMP_GPS_WAVELENGTH_L2 0.2442102134246
-
 
 typedef boost::function<double()> GetTimeCallback;
 typedef boost::function<void()> HandleAcknowledgementCallback;
@@ -97,6 +95,8 @@ typedef boost::function<void(RangeMeasurements&, double&)> RangeMeasurementsCall
 typedef boost::function<void(CompressedRangeMeasurements&, double&)> CompressedRangeMeasurementsCallback;
 typedef boost::function<void(GpsEphemeris&, double&)> GpsEphemerisCallback;
 typedef boost::function<void(RawEphemeris&, double&)> RawEphemerisCallback;
+typedef boost::function<void(RawAlmanac&, double&)> RawAlmanacCallback;
+typedef boost::function<void(Almanac&, double&)> AlmanacCallback;
 typedef boost::function<void(SatellitePositions&, double&)> SatellitePositionsCallback;
 typedef boost::function<void(SatelliteVisibility&, double&)> SatelliteVisibilityCallback;
 typedef boost::function<void(TimeOffset&, double&)> TimeOffsetCallback;
@@ -107,8 +107,6 @@ typedef boost::function<void(Position&, double&)> BestPseudorangePositionCallbac
 typedef boost::function<void(Position&, double&)> RtkPositionCallback;
 
 
-
-/* Primary Class */
 class Novatel
 {
 public:
@@ -194,7 +192,8 @@ public:
 
     void SetBaudRate(int baudrate, std::string com_port="COM1");
 
-    bool SendCommand(std::string cmd_msg);
+    bool SendCommand(std::string cmd_msg, bool wait_for_ack=true);
+    bool SendMessage(uint8_t* msg_ptr, size_t length);
 
     /*!
      * SetSvElevationCutoff
@@ -225,7 +224,7 @@ public:
 
     bool SetInitialPosition(double latitude, double longitude, double height);
     bool SetInitialTime(uint32_t gps_week, double gps_seconds);
-
+    bool InjectAlmanac(Almanac almanac);
     /*!
      * SetL1CarrierSmoothing sets the amount of smoothing to be performed on
      * code measurements. L2 smoothing is available in OEMV receivers, but
@@ -235,7 +234,7 @@ public:
      */
     bool SetCarrierSmoothing(uint32_t l1_time_constant, uint32_t l2_time_constant);
 
-    bool HardwareReset(uint8_t rst_delay=0);
+    bool HardwareReset();
     /*!
      * HotStartReset
      * Restarts the GPS receiver, initialized with
@@ -254,6 +253,8 @@ public:
      * any initial or aiding data.
      */
     bool ColdStartReset();
+
+    void SendRawEphemeridesToReceiver(RawEphemerides raw_ephemerides);
 
     /*!
      * Requests version information from the receiver
@@ -314,6 +315,10 @@ public:
         gps_ephemeris_callback_=handler;};
     void set_raw_ephemeris_callback(RawEphemerisCallback handler){
         raw_ephemeris_callback_=handler;};
+    void set_raw_almanc_callback(RawAlmanacCallback handler){
+        raw_almanac_callback_=handler;};
+    void set_almanac_callback(AlmanacCallback handler){
+        almanac_callback_=handler;};
     void set_satellite_positions_callback(SatellitePositionsCallback handler){
         satellite_positions_callback_=handler;};
     void set_satellite_visibility_callback(SatelliteVisibilityCallback handler){
@@ -331,7 +336,7 @@ public:
 
     void set_raw_msg_callback(RawMsgCallback handler) {
         raw_msg_callback_=handler;};
-
+    RawEphemerides test_ephems_;
 private:
 
   bool Connect_(std::string port, int baudrate);
@@ -382,6 +387,11 @@ private:
 	    const CompressedRangeData &cmp,
 	    const double              &uncmpPsr) const;
 
+    bool SendBinaryDataToReceiver(uint8_t* msg_ptr, size_t length);
+
+    unsigned long CRC32Value(int i);
+    unsigned long CalculateBlockCRC32 ( unsigned long ulCount, /* Number of bytes in the data block */
+                                        unsigned char *ucBuffer ); /* Data block */
 
     //////////////////////////////////////////////////////
     // Serial port reading members
@@ -433,6 +443,8 @@ private:
     CompressedRangeMeasurementsCallback compressed_range_measurements_callback_;
     GpsEphemerisCallback gps_ephemeris_callback_;
     RawEphemerisCallback raw_ephemeris_callback_;
+    AlmanacCallback almanac_callback_;
+    RawAlmanacCallback raw_almanac_callback_;
     SatellitePositionsCallback satellite_positions_callback_;
     SatelliteVisibilityCallback satellite_visibility_callback_;
     TimeOffsetCallback time_offset_callback_;
@@ -452,22 +464,29 @@ private:
 	size_t buffer_index_;		//!< index into data_buffer_
 	size_t header_length_;	//!< length of the current header being read
 	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
+    bool reading_reset_complete_;   //!< true if an {COM#} message confirming receiver reset if complete
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
 	double parse_timestamp_;		//!< time stamp when last parse began
 	BINARY_LOG_TYPE message_id_;	//!< message id of message currently being buffered
 
+    //////////////////////////////////////////////////////
+    // Mutex's
+    //////////////////////////////////////////////////////
     boost::condition_variable ack_condition_;
     boost::mutex ack_mutex_;
     bool ack_received_;     //!< true if an acknowledgement has been received from the GPS
+    boost::condition_variable reset_condition_;
+    boost::mutex reset_mutex_;
+    bool waiting_for_reset_complete_;     //!< true if GPS has finished resetting and is ready for input
 
-  bool is_connected_; //!< indicates if a connection to the receiver has been established
+    bool is_connected_; //!< indicates if a connection to the receiver has been established
 	//////////////////////////////////////////////////////
     // Receiver information and capabilities
 	//////////////////////////////////////////////////////
 	std::string protocol_version_;		//!< Receiver version, OEM4, OEMV, OEM6, or UNKNOWN
 	std::string serial_number_; //!< Receiver serial number
 	std::string hardware_version_; //!< Receiver hardware version
-	std::string software_version_; //!< Receiver hardware version
+	std::string software_version_; //!< Receiver software version
 	std::string model_;				//!< Receiver model number
 
 	bool l2_capable_; //!< Can the receiver handle L1 and L2 or just L1?
