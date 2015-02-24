@@ -18,10 +18,11 @@ The serial and Novatel packages are both "wet" packages and require Catkin.  To 
 	catkin_init_workspace
 	wstool init ./
 	
-Next, add the Serial and Novatel packages to the workspace:
+Next, add the Serial, GPS Messages, and Novatel packages to the workspace:
 
 	wstool set serial --git git@github.com:wjwwood/serial.git
 	wstool set novatel --git git@github.com:GAVLab/novatel.git
+	wstool set gps_msgs --git git@github.com:GAVLab/gps_msgs.git
 	wstool update
 
 Finally, build the packages:
