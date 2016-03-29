@@ -4,7 +4,8 @@ Configure a NovAtel OEMV series to be a static RTK base station. Should work on
 just about any RTK-capable NovAtel, but this is only tested on the ProPakv3.
 It is assumed that we are connected to the receiver on COM1 and that corrections 
 will be broadcast throught COM2 @ 9600 baud. First the receiver is reconfigured
-to communicate at 115200 baud on COM1, regardless of current setting.
+to communicate at 115200 baud on COM1, regardless of current setting. RTCMv3 
+correction format will be used.
 
 Base station elevation must be MSL (not ellipsoidal)!!
 
