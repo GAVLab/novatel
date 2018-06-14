@@ -22,7 +22,7 @@ Next, add the Serial, GPS Messages, and Novatel packages to the workspace:
 
 	wstool set serial --git git@github.com:wjwwood/serial.git
 	wstool set novatel --git git@github.com:GAVLab/novatel.git
-	wstool set gps_msgs --git git@github.com:GAVLab/gps_msgs.git
+	wstool set gps_msgs --git git@github.com:GAVLab/gps-msgs.git
 	wstool update
 
 Finally, build the packages:
